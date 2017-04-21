@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>file api</title>
+</head>
+<body onload="onload();">
+<script type="text/javascript">
+function onload () {
+
+    var sourceMap = {
+        'test.js': {
+            url: './js/test.js',
+            dataURL: null
+        },
+        'vendor.js': {
+            url: './vendor.js'
+        }
+    };
+
+    loadResource('test.js').then(function (dataURL) {
+
+        return loadScript(dataURL);
+    });
+
+    // loadResource('vendor.js', false).then(function (dataURL) {
+
+    //     return loadScript(dataURL);
+    // });
+
+    function loadResource (name, forceReload) {
+
+        var source = sourceMap[name];
+        var promise;
+
+        if (!source.dataURL && !source.promise || forceReload) {
+            source.promise = loadFromCache(name).then(function (text) {
+
+                if (!forceReload && text) {
+                    return text;
+                }
+                else {
+                    return loadFromNetwork(source.url);
+                }
+            }).then(function (text) {
+
+                writeToCache(name, text);
+
+                return prepareScriptDataURL(text);
+            }).then(function (dataURL) {
+
+                source.dataURL = dataURL;
+
+                return dataURL;
+            });
+        }
+        else if (!source.promise) {
+            source.promise = Promise.resolve(source.dataURL);
+        }
+
+        return source.promise;
+    }
+
+    function writeToCache (name, text) {
+
+        window.localStorage.setItem('source:' + name, text);
+    }
+
+    function loadFromCache (name) {
+
+        return new Promise(function (resolve) {
+
+            resolve(window.localStorage.getItem('source:' + name));
+        });
+    }
+
+    function loadFromNetwork (url) {
+
+        return fetch(url).then(function (response) {
+
+            console.log(response)
+
+            if (response.ok) {
+                return response.text();
+            }
+            else {
+
+                throw new Error(response.status);
+            }
+        });
+    }
+
+    function loadScript (src) {
+
+        return new Promise(function (resolve, reject) {
+
+            var el = document.createElement('script');
+
+            el.src = src;
+
+            document.head.appendChild(el);
+
+            el.onload = resolve;
+            el.onerror = reject;
+        });
+    }
+
+    function prepareScriptDataURL (text) {
+
+        return new Promise(function (resolve, reject) {
+
+            var file = new File([text], 'script.js');
+            var fileReader = new FileReader();
+
+            fileReader.onload = function (e) {
+
+                resolve(e.target.result);
+            };
+
+            fileReader.onerror = reject;
+
+            fileReader.readAsDataURL(file);
+        });
+    }
+}
+</script>
+</body>
+</html>
