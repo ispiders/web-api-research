@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>web worker</title>
+</head>
+<body>
+<img src="./test.jpg">
+<img src="https://timgsa.baidu.com/timg?image&quality=80&size=b9999_10000&sec=1492280700846&di=306058eaf5765aab22c845e7f62b4741&imgtype=0&src=http%3A%2F%2Fwww.xwcms.net%2FwebAnnexImages%2FfileAnnex%2F201506%2F19509%2Fkarate-highkick-icon.png">
+<script>
+
+    function register () {
+
+        if (!navigator.serviceWorker.controller) {
+
+            navigator.serviceWorker.register('./service-worker.js')
+            .then(function (worker) {
+
+                console.log('Registration succeeded, Scope is ' + worker.scope);
+
+                return worker;
+            }).catch(function (error) {
+
+                console.error(error);
+            });
+
+            navigator.serviceWorker.ready.then(function () {
+
+                console.log('serviceWorker ready')
+                location.reload();
+            });
+        }
+    }
+
+    if (!navigator.serviceWorker) {
+        document.write('Your browser does not support service worker');
+    }
+
+</script>
+</body>
+</html>
