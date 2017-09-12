@@ -20,6 +20,11 @@ var template = `
           size: auto;  /* auto is the initial value */
           margin: 0; /* this affects the margin in the printer settings */
         }
+
+        input {
+            border: none;
+            outline: none;
+        }
     </style>
     <style type="text/css">
         body {
@@ -37,6 +42,7 @@ var template = `
         }
         td, th {
             border: solid 1px #bacbdb;
+            padding: 2px 3px;
         }
         tr input {
             width: 100%; height: 100%;
@@ -75,21 +81,25 @@ var template = `
         .order-detail tr:nth-child(2n) td {
             background-color: #f3f6f7;
         }
+
+        .order-detail {
+            margin-top: 50px;
+        }
     </style>
 </head>
 <body>
 <p class="logo"><img src="logo.png"></p>
 <h1>Commercial Invoice</h1>
-<p>NO.012070908-1</p>
+<p><input id="sn" type="text" value="NO.012070908-1" /></p>
 <p></p>
 <div>
     <table class="ticket-detail" border>
         <thead>
             <tr>
-                <th>Shipper/Exporter</th>
-                <th>Jen Zhang</th>
-                <th>Consignee</th>
-                <th>Carlo de Cillis</th>
+                <th width="20%">Shipper/Exporter</th>
+                <th width="30%">Jen Zhang</th>
+                <th width="20%">Consignee</th>
+                <th width="30%">Carlo de Cillis</th>
             </tr>
         </thead>
         <tbody>
@@ -136,59 +146,45 @@ var template = `
 <div class="order-detail">
     <table>
         <tr>
-            <th>Date</th>
-            <th>Tracking</th>
             <th>Name</th>
             <th>HS code</th>
             <th>QTY</th>
             <th>Price</th>
-            <th>Remark</th>
         </tr>
 
         <tr>
-            <td>Aug 05</td>
-            <td>8456269393</td>
             <td>2ME handle case 4.7</td>
             <td>420291</td>
             <td>5.3</td>
             <td>13</td>
-            <td></td>
         </tr>
         <tr>
-            <td></td>
-            <td></td>
             <td>2ME handle case 5.5</td>
             <td>420291</td>
             <td>5.4</td>
             <td>11</td>
-            <td></td>
         </tr>
         <tr>
-            <td></td>
-            <td></td>
             <td>Pa Poster women Pink</td>
             <td>420291</td>
             <td>5.8</td>
             <td>30</td>
-            <td>粉色9 21</td>
         </tr>
         <tr>
             <td></td>
             <td></td>
-            <td>Pa Poster women Blue</td>
-            <td>420291</td>
-            <td>5.8</td>
+            <td></td>
             <td>43</td>
-            <td>蓝色13 30</td>
         </tr>
     </table>
 </div>
+
 <p>Sincerely yours,</p>
+
 <p>A-assistant Company Ltd.</p>
 
 </body>
 </html>
-
 `;
 
 function getTableData () {
@@ -271,9 +267,37 @@ function openWindow (data) {
     var logo = win.document.querySelector('.logo img');
     logo.src = chrome.extension.getURL('logo.png');
 
+    var sn = win.document.querySelector('#sn');
+    sn.value = getSN();
+
     logo.onload = function () {
         win.print();
     };
+}
+
+function getSN () {
+    var date = new Date();
+    var dLock = localStorage.getItem('print-sn-date');
+
+    if (dLock !== date.toDateString()) {
+        localStorage.setItem('print-sn-date', date.toDateString());
+        localStorage.setItem('print-sn-number', 1);
+    }
+
+    var n = parseInt(localStorage.getItem('print-sn-number') || 1);
+
+    localStorage.setItem('print-sn-number', n + 1);
+
+    return 'NO.01' +
+            date.getFullYear() +
+            prefix(date.getMonth() + 1, 2, '00') +
+            prefix(date.getDate(), 2, '00') +
+            '-' + n;
+}
+
+function prefix (str, len, pre) {
+
+    return (pre + str).slice(-len);
 }
 
 function toNumber (string) {
