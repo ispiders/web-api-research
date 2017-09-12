@@ -3,8 +3,8 @@ var colsName = {
     'column_2': 'Tracking',
     'column_3': 'Description',
     'column_4': 'HS code',
-    'column_5': 'Unit Price',
-    'column_6': 'QTY',
+    'column_5': 'QTY',
+    'column_6': 'Unit Price',
     'column_7': 'Remark',
     'cost': 'Cost'
 };
@@ -27,8 +27,12 @@ var template = `
         }
     </style>
     <style type="text/css">
+
+        p {
+            margin: 40px 0;
+        }
         body {
-            padding: 50px; margin: 0;
+            padding: 70px; margin: 0;
         }
         table {
             width: 100%;
@@ -65,6 +69,7 @@ var template = `
         }
 
         .order-detail tr:last-child td {
+            font-weight: bold;
             border-top: solid 2px;
             border-left: none;
             border-right: none;
@@ -88,10 +93,15 @@ var template = `
     </style>
 </head>
 <body>
+
 <p class="logo"><img src="logo.png"></p>
+
 <h1>Commercial Invoice</h1>
-<p><input id="sn" type="text" value="NO.012070908-1" /></p>
+
+<p><input id="sn" type="text" value="" /></p>
+
 <p></p>
+
 <div>
     <table class="ticket-detail" border>
         <thead>
@@ -106,7 +116,7 @@ var template = `
             <tr>
                 <td>Company Name:</td>
                 <td>A-assistant Co.Ltd</td>
-                <td>Company Name</td>
+                <td>Company Name:</td>
                 <td>2ME style</td>
             </tr>
             <tr>
@@ -124,7 +134,7 @@ var template = `
             <tr>
                 <td>Address:</td>
                 <td>F/1st, Office building, Liju 13th Tech Park, Zhongxin Industrial area, Shipai Town</td>
-                <td>Address: </td>
+                <td>Address:</td>
                 <td>2Me Style s.r.l. Via Agostino Bertani, 2</td>
             </tr>
             <tr>
@@ -135,21 +145,23 @@ var template = `
             </tr>
             <tr>
                 <td>Date:</td>
-                <td>Sep 8th, 2017</td>
+                <td id="print-date"></td>
                 <td>Terms: </td>
                 <td>EXW</td>
             </tr>
         </tbody>
     </table>
 </div>
+
 <p></p>
+
 <div class="order-detail">
     <table>
         <tr>
             <th>Name</th>
             <th>HS code</th>
-            <th>QTY</th>
             <th>Price</th>
+            <th>QTY</th>
         </tr>
 
         <tr>
@@ -185,6 +197,7 @@ var template = `
 
 </body>
 </html>
+
 `;
 
 function getTableData () {
@@ -269,6 +282,9 @@ function openWindow (data) {
 
     var sn = win.document.querySelector('#sn');
     sn.value = getSN();
+
+    var printDate = win.document.querySelector('#print-date');
+    printDate.innerHTML = new Date().toDateString();
 
     logo.onload = function () {
         win.print();
