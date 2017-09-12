@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title></title>
+    <meta charset="utf-8" />
+    <style media="print">
+        @page {
+          size: auto;  /* auto is the initial value */
+          margin: 0; /* this affects the margin in the printer settings */
+        }
+    </style>
+    <style type="text/css">
+        body {
+            padding: 50px; margin: 0;
+        }
+        table {
+            width: 100%;
+            text-align: left;
+            border: none;
+            border-collapse: collapse;
+            color: #496291;
+        }
+        tr {
+            border: none;
+        }
+        td, th {
+            border: solid 1px #bacbdb;
+        }
+        tr input {
+            width: 100%; height: 100%;
+            border: none;
+            outline: none;
+        }
+        th input {
+            font-weight: bold;
+        }
+        .logo {
+            text-align: right;
+        }
+
+        table tr:first-child th {
+            border-top: none;
+        }
+
+        table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .order-detail tr:last-child td {
+            border-top: solid 2px;
+            border-left: none;
+            border-right: none;
+        }
+
+        tr td:first-child, tr th:first-child {
+            border-left: none;
+        }
+
+        tr td:last-child, tr th:last-child {
+            border-right: none;
+        }
+
+        .order-detail tr:nth-child(2n) td {
+            background-color: #f3f6f7;
+        }
+
+        .order-detail {
+            margin-top: 50px;
+        }
+    </style>
+</head>
+<body>
+<p class="logo"><img src="logo.png"></p>
+<h1>Commercial Invoice</h1>
+<p>NO.012070908-1</p>
+<p></p>
+<div>
+    <table class="ticket-detail" border>
+        <thead>
+            <tr>
+                <th>Shipper/Exporter</th>
+                <th>Jen Zhang</th>
+                <th>Consignee</th>
+                <th>Carlo de Cillis</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>Company Name:</td>
+                <td>A-assistant Co.Ltd</td>
+                <td>Company Name</td>
+                <td>2ME style</td>
+            </tr>
+            <tr>
+                <td>Tel:</td>
+                <td>+86 13631668463</td>
+                <td>Tel:</td>
+                <td>+39 02 39663300</td>
+            </tr>
+            <tr>
+                <td>Email:</td>
+                <td>jen@a-assistant.com</td>
+                <td>Email:</td>
+                <td>c.decillis@2mestyle.com</td>
+            </tr>
+            <tr>
+                <td>Address:</td>
+                <td>F/1st, Office building, Liju 13th Tech Park, Zhongxin Industrial area, Shipai Town</td>
+                <td>Address: </td>
+                <td>2Me Style s.r.l. Via Agostino Bertani, 2</td>
+            </tr>
+            <tr>
+                <td>City, State Zip Code:</td>
+                <td>Dongguan City 523332, China</td>
+                <td>City, State Zip Code:</td>
+                <td>20154 Milano IT</td>
+            </tr>
+            <tr>
+                <td>Date:</td>
+                <td>Sep 8th, 2017</td>
+                <td>Terms: </td>
+                <td>EXW</td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+<p></p>
+<div class="order-detail">
+    <table>
+        <tr>
+            <th>Date</th>
+            <th>Tracking</th>
+            <th>Name</th>
+            <th>HS code</th>
+            <th>QTY</th>
+            <th>Price</th>
+            <th>Remark</th>
+        </tr>
+
+        <tr>
+            <td>Aug 05</td>
+            <td>8456269393</td>
+            <td>2ME handle case 4.7</td>
+            <td>420291</td>
+            <td>5.3</td>
+            <td>13</td>
+            <td></td>
+        </tr>
+        <tr>
+            <td></td>
+            <td></td>
+            <td>2ME handle case 5.5</td>
+            <td>420291</td>
+            <td>5.4</td>
+            <td>11</td>
+            <td></td>
+        </tr>
+        <tr>
+            <td></td>
+            <td></td>
+            <td>Pa Poster women Pink</td>
+            <td>420291</td>
+            <td>5.8</td>
+            <td>30</td>
+            <td>粉色9 21</td>
+        </tr>
+        <tr>
+            <td></td>
+            <td></td>
+            <td>Pa Poster women Blue</td>
+            <td>420291</td>
+            <td>5.8</td>
+            <td>43</td>
+            <td>蓝色13 30</td>
+        </tr>
+    </table>
+</div>
+
+<p>Sincerely yours,</p>
+
+<p>A-assistant Company Ltd.</p>
+
+</body>
+</html>
