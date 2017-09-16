@@ -33,6 +33,7 @@ var template = `
         }
         body {
             padding: 70px; margin: 0;
+            font-family: "Helvetica Neue", "Times new Roman", "Microsoft YaHei";
         }
         table {
             width: 100%;
@@ -197,7 +198,6 @@ var template = `
 
 </body>
 </html>
-
 `;
 
 function getTableData () {
