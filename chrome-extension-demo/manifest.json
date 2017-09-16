@@ -1,6 +1,6 @@
 {
     "name": "chaojibiaoge print",
-    "version": "0.9.1",
+    "version": "1.0.0",
     "manifest_version": 2,
     "description": "chaojibiaoge excel print",
     "icons":
@@ -8,7 +8,8 @@
         "128": "icon.png"
     },
     "web_accessible_resources": [
-        "logo.png"
+        "logo.svg",
+        "template.css"
     ],
     "permissions": ["*://chaojibiaoge.com/*"],
     "browser_action":

@@ -15,87 +15,11 @@ var template = `
 <head>
     <title></title>
     <meta charset="utf-8" />
-    <style media="print">
-        @page {
-          size: auto;  /* auto is the initial value */
-          margin: 0; /* this affects the margin in the printer settings */
-        }
-
-        input {
-            border: none;
-            outline: none;
-        }
-    </style>
-    <style type="text/css">
-
-        p {
-            margin: 40px 0;
-        }
-        body {
-            padding: 70px; margin: 0;
-            font-family: "Helvetica Neue", "Times new Roman", "Microsoft YaHei";
-        }
-        table {
-            width: 100%;
-            text-align: left;
-            border: none;
-            border-collapse: collapse;
-            color: #496291;
-        }
-        tr {
-            border: none;
-        }
-        td, th {
-            border: solid 1px #bacbdb;
-            padding: 2px 3px;
-        }
-        tr input {
-            width: 100%; height: 100%;
-            border: none;
-            outline: none;
-        }
-        th input {
-            font-weight: bold;
-        }
-        .logo {
-            text-align: right;
-        }
-
-        table tr:first-child th {
-            border-top: none;
-        }
-
-        table tr:last-child td {
-            border-bottom: none;
-        }
-
-        .order-detail tr:last-child td {
-            font-weight: bold;
-            border-top: solid 2px;
-            border-left: none;
-            border-right: none;
-        }
-
-        tr td:first-child, tr th:first-child {
-            border-left: none;
-        }
-
-        tr td:last-child, tr th:last-child {
-            border-right: none;
-        }
-
-        .order-detail tr:nth-child(2n) td {
-            background-color: #f3f6f7;
-        }
-
-        .order-detail {
-            margin-top: 50px;
-        }
-    </style>
+    <link id="template-style" rel="stylesheet" type="text/css" href="template.css"></link>
 </head>
 <body>
 
-<p class="logo"><img src="logo.png"></p>
+<p class="logo"><img src="logo.svg" width="30%"></p>
 
 <h1>Commercial Invoice</h1>
 
@@ -278,7 +202,7 @@ function openWindow (data) {
     win.document.querySelector('.order-detail').innerHTML = makeTable(data);
 
     var logo = win.document.querySelector('.logo img');
-    logo.src = chrome.extension.getURL('logo.png');
+    logo.src = chrome.extension.getURL('logo.svg');
 
     var sn = win.document.querySelector('#sn');
     sn.value = getSN();
@@ -286,9 +210,29 @@ function openWindow (data) {
     var printDate = win.document.querySelector('#print-date');
     printDate.innerHTML = new Date().toDateString();
 
-    logo.onload = function () {
-        win.print();
+    var templateStyle = win.document.querySelector('#template-style');
+    templateStyle.href = chrome.extension.getURL('template.css');
+
+    templateStyle.onload = function () {
+        allReady(2, function () {
+            win.print();
+        });
     };
+
+    logo.onload = function () {
+        allReady(2, function () {
+            win.print();
+        });
+    };
+}
+
+function allReady (n, callback) {
+
+    allReady.finished = (allReady.finished || 0) + 1;
+
+    if (allReady.finished === n) {
+        callback();
+    }
 }
 
 function getSN () {
@@ -323,19 +267,23 @@ function toNumber (string) {
     return ret ? parseFloat(ret[0]) : 0;
 }
 
+function preview () {
+    openWindow(getTableData());
+}
+
 window.addEventListener('keydown', function (event) {
 
     if (event.key === 'p' && (event.ctrlKey || event.metaKey)) {
         event.preventDefault();
 
-        openWindow(getTableData());
+        preview();
     }
 }, false);
 
 chrome.extension.onRequest.addListener(function (request, sender, sendResponse) {
 
     if (request.action === 'print') {
-        openWindow(getTableData());
+        preview();
     }
 
     sendResponse('received');
