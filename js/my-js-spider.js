@@ -129,8 +129,8 @@ Downloader.prototype = {
 
         a.click();
 
-        a.innerHTML = 'download.txt';
-        document.body.appendChild(a);
+        // a.innerHTML = 'download.txt';
+        // document.body.appendChild(a);
     },
 
     start: function start (ops) {
