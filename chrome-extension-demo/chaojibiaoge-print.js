@@ -124,6 +124,16 @@ var template = `
 </html>
 `;
 
+function isDollar (fieldid) {
+
+    return -1 !== ['Unit Price', 'Cost'].indexOf(colsName[fieldid]);
+}
+
+function isNumber (fieldid) {
+
+    return isDollar(fieldid) || colsName[fieldid] === 'QTY';
+}
+
 function getTableData () {
     var selected = document.querySelectorAll('td[isselect=true]');
     var data = [];
@@ -142,7 +152,12 @@ function getTableData () {
             data.push(row);
         }
 
-        row[fieldid] = td.innerText;
+        if (isNumber(fieldid)) {
+            row[fieldid] = toNumber(td.innerText) || 0;
+        }
+        else {
+            row[fieldid] = td.innerText;
+        }
     });
 
     return {
@@ -166,12 +181,12 @@ function makeTable (table) {
 
     table.data.forEach(function (tr, index) {
 
-        tr.cost = tr.cost || (toNumber(tr.column_5) * toNumber(tr.column_6)).toFixed(2);
+        tr.cost = tr.cost || (tr.column_5 * tr.column_6).toFixed(2);
 
         str += '<tr>';
         cols.forEach(function (col) {
             str += '<td>';
-            str += tr[col];
+            str += (isDollar(col) ? 'USD $' : '') + tr[col];
             str += '</td>';
         });
         str += '</tr>';
@@ -180,8 +195,14 @@ function makeTable (table) {
     str += '<tr>';
     cols.forEach(function (col) {
         str += '<td>';
-        if (col === 'cost') {
-            str += table.data.reduce((a, b) => (a + toNumber(b['cost'])), 0).toFixed(2);
+        if (col === 'column_4') {
+            str += 'Total';
+        }
+        else if (col === 'column_5') {
+            str += table.data.reduce((a, b) => (a + b['column_5']), 0);
+        }
+        else if (col === 'cost') {
+            str += 'USD $' + table.data.reduce((a, b) => (a + toNumber(b['cost'])), 0).toFixed(2);
         }
         str += '</td>';
     });
