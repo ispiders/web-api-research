@@ -175,7 +175,7 @@ function makeTable (table) {
 
     str += '<tr>';
     cols.forEach(function (col) {
-        str += '<th' + (isDollar(col) ? ' class="text-right"' : '') + '>';
+        str += '<th' + (isNumber(col) ? ' class="text-right"' : '') + '>';
         str += colsName[col];
         str += '</th>';
     });
@@ -187,7 +187,7 @@ function makeTable (table) {
 
         str += '<tr>';
         cols.forEach(function (col) {
-            str += '<td' + (isDollar(col) ? ' class="text-right"' : '') + '>';
+            str += '<td' + (isNumber(col) ? ' class="text-right"' : '') + '>';
             str += (isDollar(col) ? dollarUnit : '') + tr[col];
             str += '</td>';
         });
@@ -196,7 +196,7 @@ function makeTable (table) {
 
     str += '<tr>';
     cols.forEach(function (col) {
-        str += '<td' + (isDollar(col) ? ' class="text-right"' : '') + '>';
+        str += '<td' + (isNumber(col) ? ' class="text-right"' : '') + '>';
         if (col === 'column_4') {
             str += 'Total';
         }
