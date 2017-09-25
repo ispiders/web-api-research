@@ -88,3 +88,7 @@ tr td:last-child, tr th:last-child {
 .order-detail {
     margin-top: 50px;
 }
+
+.text-right {
+    text-align: right;
+}

@@ -124,6 +124,8 @@ var template = `
 </html>
 `;
 
+var dollarUnit = '$';
+
 function isDollar (fieldid) {
 
     return -1 !== ['Unit Price', 'Cost'].indexOf(colsName[fieldid]);
@@ -173,7 +175,7 @@ function makeTable (table) {
 
     str += '<tr>';
     cols.forEach(function (col) {
-        str += '<th>';
+        str += '<th' + (isDollar(col) ? ' class="text-right"' : '') + '>';
         str += colsName[col];
         str += '</th>';
     });
@@ -185,8 +187,8 @@ function makeTable (table) {
 
         str += '<tr>';
         cols.forEach(function (col) {
-            str += '<td>';
-            str += (isDollar(col) ? 'USD $' : '') + tr[col];
+            str += '<td' + (isDollar(col) ? ' class="text-right"' : '') + '>';
+            str += (isDollar(col) ? dollarUnit : '') + tr[col];
             str += '</td>';
         });
         str += '</tr>';
@@ -194,7 +196,7 @@ function makeTable (table) {
 
     str += '<tr>';
     cols.forEach(function (col) {
-        str += '<td>';
+        str += '<td' + (isDollar(col) ? ' class="text-right"' : '') + '>';
         if (col === 'column_4') {
             str += 'Total';
         }
@@ -202,7 +204,7 @@ function makeTable (table) {
             str += table.data.reduce((a, b) => (a + b['column_5']), 0);
         }
         else if (col === 'cost') {
-            str += 'USD $' + table.data.reduce((a, b) => (a + toNumber(b['cost'])), 0).toFixed(2);
+            str += dollarUnit + table.data.reduce((a, b) => (a + toNumber(b['cost'])), 0).toFixed(2);
         }
         str += '</td>';
     });
