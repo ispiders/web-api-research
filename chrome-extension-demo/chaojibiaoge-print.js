@@ -3,8 +3,8 @@ var colsName = {
     'column_2': 'Tracking',
     'column_3': 'Description',
     'column_4': 'HS code',
-    'column_5': 'QTY',
-    'column_6': 'Unit Price',
+    'column_5': 'Unit Price',
+    'column_6': 'QTY',
     'column_7': 'Remark',
     'cost': 'Cost'
 };
@@ -200,8 +200,8 @@ function makeTable (table) {
         if (col === 'column_4') {
             str += 'Total';
         }
-        else if (col === 'column_5') {
-            str += table.data.reduce((a, b) => (a + b['column_5']), 0);
+        else if (col === 'column_6') {
+            str += table.data.reduce((a, b) => (a + b['column_6']), 0);
         }
         else if (col === 'cost') {
             str += dollarUnit + table.data.reduce((a, b) => (a + toNumber(b['cost'])), 0).toFixed(2);

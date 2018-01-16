@@ -28,6 +28,7 @@ p {
 body {
     padding: 70px; margin: 0;
     font-family: "Microsoft YaHei", "Myriad";
+    font-size: 16px;
 }
 table {
     width: 100%;
@@ -88,4 +89,8 @@ tr td:last-child, tr th:last-child {
 
 .text-right {
     text-align: right;
+}
+
+.ticket-detail {
+    font-size: 12px;
 }
