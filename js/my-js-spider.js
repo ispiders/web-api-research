@@ -4,10 +4,14 @@
  * 用最新的chrome浏览器
  * @author ispiders
  */
-function Downloader (options) {
+function Downloader (state) {
 
-    this.options = options || {};
+    this.state = state || {};
     this.running = false;
+
+    if (!this.state.contents) {
+        this.state.contents = [];
+    }
 }
 
 Downloader.prototype = {
@@ -69,33 +73,29 @@ Downloader.prototype = {
         return div;
     },
 
-    fetchAll: function fetchAll (options) {
+    fetchAll: function fetchAll (state) {
 
         var that = this,
-            index = options.index,
-            menu = options.menu;
+            index = state.index,
+            menu = state.menu;
 
-        if (index < (options.end || menu.length)) {
+        if (index < (state.end || menu.length)) {
 
             return this.fetchOne(menu[index].href).then(function (text) {
 
                 console.log(index + 1, menu[index].title, menu[index].href);
 
-                if (options.appendTitle) {
-                    options.text += '\n' + menu[index].title + '\n';
-                }
+                state.contents.push(text);
+                state.index++;
 
-                options.text += text;
-                options.index++;
-
-                return that.fetchAll(options);
+                return that.fetchAll(state);
             }, function (error) {
-                options.error = error;
-                return Promise.reject(options);
+                state.error = error;
+                return Promise.reject(state);
             });
         }
         else {
-            return Promise.resolve(options);
+            return Promise.resolve(state);
         }
     },
 
@@ -103,20 +103,50 @@ Downloader.prototype = {
 
         var that = this;
 
-        return this.fetchChapter(url, that.options.charset)
+        return this.fetchChapter(url, that.state.charset)
         .then(function (html) {
 
             html = html.match(/<body.*>([\s\S]*)<\/body>/)[1];
 
             var doc = that.evalHtml(html);
 
-            return doc.querySelector(that.options.contentSelector).innerText;
+            return doc.querySelector(that.state.contentSelector).innerText;
         });
+    },
+
+    makeContent: function () {
+
+        var
+            state = this.state,
+            menu = state.menu,
+            contents = [state.title];
+
+        if (menu.length !== state.contents.length) {
+            console.warn('menu length and content length not match');
+        }
+
+        if (state.appendTitle) {
+            for (var i = 0; i < menu.length; ++i) {
+                contents.push(this.makeTitle(menu[i].title, i));
+                contents.push(state.contents[i]);
+            }
+        }
+        else {
+            contents = contents.concat(state.contents);
+        }
+
+        return contents;
+    },
+
+    makeTitle: function (title, index) {
+
+        return '\n' + title + '\n';
     },
 
     makeObjectURL: function makeObjectURL () {
 
-        var file = new File([this.options.text], this.options.title + '.txt');
+        var file = new File(this.makeContent(), this.state.title + '.txt');
+
         return URL.createObjectURL(file);
     },
 
@@ -136,26 +166,26 @@ Downloader.prototype = {
     start: function start (ops) {
 
         var that = this,
-            options = this.options;
+            state = this.state;
 
         if (ops) {
-            Object.assign(options, ops);
+            Object.assign(state, ops);
         }
 
-        options.index = options.index || 0;
-        options.menu = options.menu || that.getMenu(options.menuItem);
+        state.index = state.index || 0;
+        state.menu = state.menu || that.getMenu(state.menuItem);
 
         if (!this.running) {
 
             this.running = true;
 
-            this.fetchAll(options).then(function (ret) {
+            this.fetchAll(state).then(function (ret) {
 
                 console.info('done');
 
                 that.running = false;
 
-                that.download(that.makeObjectURL(), options.title + '.txt');
+                that.download(that.makeObjectURL(), state.title + '.txt');
             }).catch(function (e) {
 
                 that.running = false;
@@ -163,7 +193,7 @@ Downloader.prototype = {
             });
         }
 
-        return options;
+        return state;
     }
 };
 
@@ -171,12 +201,11 @@ var d = new Downloader();
 
 // 如果中途由于网络请求失败而终止，重新调用一次 d.start(/*不用参数哦*/); 可以继续下载
 d.start({
-    menuItem: '#readerlist a', // 目录链接 selector
-    contentSelector: '#chapterContent', // 详情页需要获取内容的标签 selector
-    title: '末世为王',
-    text: '末世为王\n',
+    menuItem: '#list a', // 目录链接 selector
+    contentSelector: '#content', // 详情页需要获取内容的标签 selector
+    title: '',
     charset: 'gbk', // 页面编码
     // index: 0, // 目录起始值
     // end: 0, // 目录终止值
-    appendTitle: false // 是否将目录名添加到详情内容前
+    appendTitle: true // 是否将目录名添加到详情内容前
 });
