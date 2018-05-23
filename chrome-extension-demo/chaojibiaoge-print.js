@@ -9,6 +9,66 @@ var colsName = {
     'cost': 'Cost'
 };
 
+var ticketTable = {
+    thead: [
+        {width: '20%', name: 'Shipper/Exporter'},
+        {width: '30%', name: 'Jen Zhang'},
+        {width: '20%', name: 'Consignee'},
+        {width: '30%', name: 'Carlo de Cillis'},
+    ],
+    tbody: [
+        ["Company Name:", "A-assistant Co.Ltd",
+            "Company Name:", "2ME style"],
+        ["Tel:", "+86 13631668463",
+            "Tel:", "+39 02 39663300"],
+        ["Email:", "jen@a-assistant.com",
+            "Email:", "c.decillis@2mestyle.com"],
+        ["Address:", "F/1st, Office building, Liju 13th Tech Park, Zhongxin Industrial area, Shipai Town",
+            "Address:", "2ME STYLE S.R.L. VIA RISORGIMENTO 44"],
+        ["City, State Zip Code:", "Dongguan City 523332, China",
+            "City, State Zip Code:", "20017 - RHO (FRAZ.MAZZO)"],
+        ["Date:", dateString,
+            "Terms: ", "EXW"]
+    ]
+};
+
+function dateString () {
+
+    return new Date().toDateString();
+}
+
+function ticketTableHTML () {
+
+    var html = '';
+
+    html += '<thead>';
+
+    for (var i = 0, item; i < ticketTable.thead.length; ++i) {
+
+        item = ticketTable.thead[i];
+        html += '<th width="' + item.width + '">' + item.name + '</th>';
+    }
+
+    html += '</thead>';
+
+    html += '<tbody>';
+
+    for (var i = 0, item; i < ticketTable.tbody.length; ++i) {
+
+        item = ticketTable.tbody[i];
+
+        html += '<tr>';
+        for (var j = 0; j < item.length; ++j) {
+            html += '<td>' + (typeof item[j] === 'function' ? item[j]() : item[j]) + '</td>';
+        }
+        html += '</tr>';
+    }
+
+    html += '</tbody>';
+
+    return html;
+}
+
 var template = `
 <!DOCTYPE html>
 <html>
@@ -230,8 +290,10 @@ function openWindow (data) {
     var sn = win.document.querySelector('#sn');
     sn.value = getSN();
 
-    var printDate = win.document.querySelector('#print-date');
-    printDate.innerHTML = new Date().toDateString();
+    win.document.querySelector('.ticket-detail').innerHTML = ticketTableHTML();
+
+    // var printDate = win.document.querySelector('#print-date');
+    // printDate.innerHTML = new Date().toDateString();
 
     var templateStyle = win.document.querySelector('#template-style');
     templateStyle.href = chrome.extension.getURL('template.css');
