@@ -60,13 +60,13 @@ var template = `
                 <td>Address:</td>
                 <td>F/1st, Office building, Liju 13th Tech Park, Zhongxin Industrial area, Shipai Town</td>
                 <td>Address:</td>
-                <td>2Me Style s.r.l. Via Agostino Bertani, 2</td>
+                <td>2ME STYLE S.R.L. VIA RISORGIMENTO 44</td>
             </tr>
             <tr>
                 <td>City, State Zip Code:</td>
                 <td>Dongguan City 523332, China</td>
                 <td>City, State Zip Code:</td>
-                <td>20154 Milano IT</td>
+                <td>20017 - RHO (FRAZ.MAZZO)</td>
             </tr>
             <tr>
                 <td>Date:</td>
