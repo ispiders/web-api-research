@@ -59,6 +59,7 @@ class Spider {
     }
     run() {
         let task = this.next();
+        this.paused = false;
         if (task) {
             this.getDocument(task.url, task.encoding).then((doc) => {
                 if (task) {
@@ -71,6 +72,11 @@ class Spider {
                 }
             });
         }
+    }
+    download(fn) {
+        download(this.state.reduce((text, item) => {
+            text += fn(item);
+        }, ''));
     }
 }
 function parseMenu(spider, doc) {
@@ -100,3 +106,6 @@ let tasks = [{
         parse: parseMenu
     }];
 let spider = new Spider(tasks);
+window.onbeforeunload = function () {
+    return 'spider downloading';
+};

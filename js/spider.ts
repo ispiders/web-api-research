@@ -105,6 +105,8 @@ class Spider {
 
         let task = this.next();
 
+        this.paused = false;
+
         if (task) {
             this.getDocument(task.url, task.encoding).then((doc) => {
 
@@ -119,6 +121,14 @@ class Spider {
                 }
             });
         }
+    }
+
+    download (fn: (item: any) => string) {
+
+        download(this.state.reduce((text, item) => {
+
+            text += fn(item);
+        }, ''));
     }
 }
 
@@ -163,3 +173,7 @@ let tasks: Task[] = [{
 }];
 
 let spider = new Spider(tasks);
+
+window.onbeforeunload = function () {
+    return 'spider downloading';
+}
