@@ -31,7 +31,7 @@ function download(text, name = 'download.txt') {
 }
 class Spider {
     constructor(tasks) {
-        this.index = -1;
+        this.finished = 0;
         this.interval = 100;
         this.paused = false;
         this.tasks = tasks;
@@ -43,7 +43,6 @@ class Spider {
     next() {
         let len = this.tasks.length;
         if (len) {
-            this.index++;
             return this.tasks.shift();
         }
         return undefined;
@@ -65,6 +64,7 @@ class Spider {
                 if (task) {
                     task.parse(this, doc);
                 }
+                this.finished++;
                 if (!this.paused) {
                     setTimeout(() => {
                         this.run();
@@ -76,6 +76,7 @@ class Spider {
     download(fn) {
         download(this.state.reduce((text, item) => {
             text += fn(item);
+            return text;
         }, ''));
     }
 }
@@ -85,6 +86,7 @@ function parseMenu(spider, doc) {
         let item = elems[i];
         spider.addTask({
             url: item.href,
+            encoding: this.encoding,
             title: item.innerText,
             contentSelector: this.contentSelector,
             parse: parseContent
@@ -101,6 +103,7 @@ function parseContent(spider, doc) {
 }
 let tasks = [{
         url: './',
+        encoding: 'gbk',
         menuSelector: '#list a',
         contentSelector: '#content',
         parse: parseMenu
@@ -109,3 +112,8 @@ let spider = new Spider(tasks);
 window.onbeforeunload = function () {
     return 'spider downloading';
 };
+//
+spider.run();
+spider.download((item) => {
+    return item.title + '\n' + item.content + '\n';
+});

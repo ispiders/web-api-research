@@ -63,7 +63,7 @@ class Spider {
 
     tasks: Task[];
     state: any[];
-    index: number = -1;
+    finished: number = 0;
     interval: number = 100;
     paused: boolean = false;
 
@@ -82,8 +82,6 @@ class Spider {
         let len = this.tasks.length;
 
         if (len) {
-            this.index++;
-
             return this.tasks.shift();
         }
 
@@ -114,6 +112,8 @@ class Spider {
                     task.parse(this, doc);
                 }
 
+                this.finished++;
+
                 if (!this.paused) {
                     setTimeout(() => {
                         this.run();
@@ -128,6 +128,8 @@ class Spider {
         download(this.state.reduce((text, item) => {
 
             text += fn(item);
+
+            return text;
         }, ''));
     }
 }
@@ -147,6 +149,7 @@ function parseMenu (this: TMenuTask, spider: Spider, doc: HTMLDocument): void {
 
         spider.addTask({
             url: item.href,
+            encoding: this.encoding,
             title: item.innerText,
             contentSelector: this.contentSelector,
             parse: parseContent
@@ -167,6 +170,7 @@ function parseContent (this: TMenuTask, spider: Spider, doc: HTMLDocument) {
 
 let tasks: Task[] = [{
     url: './',
+    encoding: 'gbk',
     menuSelector: '#list a',
     contentSelector: '#content',
     parse: parseMenu
@@ -177,3 +181,10 @@ let spider = new Spider(tasks);
 window.onbeforeunload = function () {
     return 'spider downloading';
 }
+
+//
+spider.run();
+
+spider.download((item) => {
+    return item.title + '\n' + item.content + '\n';
+});
