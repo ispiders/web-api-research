@@ -99,11 +99,13 @@ class Spider {
         this.paused = true;
     }
 
-    run (): void {
+    run (force?: boolean): void {
 
         let task = this.next();
 
-        this.paused = false;
+        if (force) {
+            this.paused = false;
+        }
 
         if (task) {
             this.getDocument(task.url, task.encoding).then((doc) => {
@@ -123,11 +125,11 @@ class Spider {
         }
     }
 
-    download (fn: (item: any) => string) {
+    download (fn: (item: any, index: number) => string) {
 
-        download(this.state.reduce((text, item) => {
+        download(this.state.reduce((text, item, index) => {
 
-            text += fn(item);
+            text += fn(item, index);
 
             return text;
         }, ''));

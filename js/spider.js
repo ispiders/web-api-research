@@ -56,9 +56,11 @@ class Spider {
     pause() {
         this.paused = true;
     }
-    run() {
+    run(force) {
         let task = this.next();
-        this.paused = false;
+        if (force) {
+            this.paused = false;
+        }
         if (task) {
             this.getDocument(task.url, task.encoding).then((doc) => {
                 if (task) {
@@ -74,8 +76,8 @@ class Spider {
         }
     }
     download(fn) {
-        download(this.state.reduce((text, item) => {
-            text += fn(item);
+        download(this.state.reduce((text, item, index) => {
+            text += fn(item, index);
             return text;
         }, ''));
     }
