@@ -1,8 +1,8 @@
 {
-    "name": "chaojibiaoge print",
-    "version": "1.2.0",
+    "name": "online print",
+    "version": "1.3.0",
     "manifest_version": 2,
-    "description": "chaojibiaoge excel print",
+    "description": "online excel print",
     "update_url": "http://0.0.0.0",
     "icons":
     {
@@ -12,7 +12,7 @@
         "logo.svg",
         "template.css"
     ],
-    "permissions": ["*://chaojibiaoge.com/*"],
+    "permissions": ["*://chaojibiaoge.com/*", "*://docs.qq.com/*"],
     "browser_action":
     {
         "default_title": "",
@@ -25,7 +25,11 @@
     "content_scripts": [
         {
             "matches": ["*://chaojibiaoge.com/*"],
-            "js": ["chaojibiaoge-print.js"]
+            "js": ["common.js", "chaojibiaoge-print.js"]
+        },
+        {
+            "matches": ["*://docs.qq.com/*"],
+            "js": ["qq.excel-init.js", "common.js", "qq.excel.js"]
         }
     ]
 }
