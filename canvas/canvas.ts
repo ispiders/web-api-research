@@ -72,13 +72,15 @@ function downloadCanvas (canvas: HTMLCanvasElement, name: string) {
     a.click();
 }
 
-let initialAngle = 0.25;
+let initialAngle = 0;
 
-renderFrame(initialAngle);
+renderFrame(0.7);
 
 document.querySelector('#submit').onclick = function () {
-    initialAngle += 0.05;
-    initialAngle = initialAngle >= 1 ? 0.05 : initialAngle;
+    let setting = getSetting();
+
+    initialAngle += 1 / setting.frames;
+    initialAngle = initialAngle > 1 ? 0 : initialAngle;
     renderFrame(initialAngle);
 };
 
