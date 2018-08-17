@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>转盘抽奖</title>
+    <meta charset="utf-8" />
+
+    <link rel="stylesheet" type="text/css" href="styles/turntable.css">
+</head>
+<body>
+    <div class="container">
+
+        <div class="message-box">
+
+        </div>
+
+        <div class="row">
+            <div class="turntable">
+
+                <div class="wheel">
+                    <img class="full-width" src="images/wheel.png">
+                </div>
+
+                <img class="center-box" src="images/table-pointer.png">
+
+                <div class="center-button center-box">
+
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script type="text/javascript" src="js/turntable.js"></script>
+    <script type="text/javascript">
+    (function () {
+        var table = new Turntable({
+            target: document.querySelector('.wheel')
+        });
+
+        table.showMessage = function (message) {
+
+            document.querySelector('.message-box').innerHTML = message;
+        };
+
+        document.querySelector('.center-button').onclick = function () {
+            table.start();
+        };
+    })();
+    </script>
+</body>
+</html>

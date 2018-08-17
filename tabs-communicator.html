@@ -1,0 +1,288 @@
+<script src="libs/jquery-1.10.2.min.js"></script>
+<script>
+(function (window, undefined) {
+    function SharedAdapter(namespace) {
+        this.namespace = namespace;
+
+        this.init();
+    }
+
+    window.SharedAdapter = SharedAdapter;
+
+    SharedAdapter.isSupported = function () {
+        return !!window.localStorage;
+    };
+
+    SharedAdapter.prototype = {
+
+        storageArea: localStorage,
+
+        use: function (callback) {
+            this._mediaConstructor = callback;
+        },
+
+        sharedOptionsName: function () {
+            return this.namespace + ':store';
+        },
+
+        getSharedOptions: function (key) {
+            if (!key) {
+                return this.unserialize(
+                    this.storageArea.getItem(this.sharedOptionsName())
+                ) || {};
+            }
+            else {
+                var options = this.getSharedOptions();
+
+                return options[key];
+            }
+        },
+
+        setSharedOptions: function (key, value) {
+            if (value === undefined) {
+                this.storageArea.setItem(this.sharedOptionsName(), this.serialize(key));
+            }
+            else {
+                var options = this.getSharedOptions();
+
+                options[key] = value;
+                this.setSharedOptions(options);
+            }
+        },
+
+        generateUID: function () {
+            this.uid = this.getSharedOptions('uid');
+            this.uid = this.uid ? +this.uid + 1 : 1;
+            this.setSharedOptions('uid', this.uid);
+
+            return this.uid;
+        },
+
+        init: function () {
+            var self = this;
+
+            this.generateUID();
+
+            this.onStorage = function (e) {
+                if (e.storageArea === this.storageArea) {
+                    switch (e.key) {
+                        case this.namespace:
+                            this.recieve(e.newValue);
+                            break;
+
+                        default:
+                            ;
+                    }
+                }
+            }.bind(this);
+
+            window.addEventListener('storage', this.onStorage, false);
+
+            $(window)
+                .on('unload', function () {
+                    self.destory();
+                });
+        },
+
+        ping: function (uid) {
+            return this.send({}, 'ping', uid);
+        },
+
+        responseForPing: function (pack) {
+            return this.send({
+                signature: pack.signature
+            }, 'gnip', pack.from);
+        },
+
+        recieve: function (pack) {
+            if (!pack) {
+                return;
+            }
+
+            pack = this.unserialize(pack);
+
+            if (pack.to !== undefined && pack.to != this.uid || pack.from == this.uid) {
+                return;
+            }
+console.log('recieve', pack);
+            var self = this;
+            switch (pack.type) {
+                case 'data':
+                    $(this)
+                        .triggerHandler('data', pack.data);
+                    break;
+
+                case 'ping':
+                    this.responseForPing(pack);
+                    break;
+
+                case 'gnip':
+                    $(this)
+                        .triggerHandler('gnip', pack.data);
+                    break;
+
+                case 'request':
+                    this.request.apply(this, pack.data)
+                        .then(function (response) {
+                            self.send({
+                                signature: pack.signature,
+                                data: response
+                            }, 'tseuqer', pack.from);
+
+                            return response;
+                        });
+                    break;
+
+                case 'tseuqer':
+                    $(this)
+                        .triggerHandler('tseuqer', pack.data);
+                    break;
+            }
+        },
+
+        send: function (data, type, to) {
+            // console.log(data, type, to)
+            var timestamp = Date.now();
+            var pack = {
+                'type': type || 'data',
+                'data': data,
+                'from': this.uid,
+                'to': to,
+                'timestamp': timestamp,
+                'signature': this.uid + ':' + timestamp + ':' + parseInt(Math.random() * 1000)
+            };
+
+            this.storageArea.removeItem(this.namespace);
+            this.storageArea.setItem(this.namespace, this.serialize(pack));
+
+            return pack;
+        },
+
+        _request: function () {
+            var data = Array.prototype.slice.call(arguments);
+            // todo
+            return this.api.get.apply(this, data);
+        },
+
+        request: function () {
+            var self = this;
+            var data = Array.prototype.slice.call(arguments);
+
+            return new Promise(function (resolve, reject) {
+                self.standOut()
+                    .then(function (standOutID) {
+                        if (self.isStandOut()) {
+                            resolve(self._request.apply(self, data));
+                        }
+                        else {
+                            var pack = self.send(data, 'request', standOutID);
+                            $(self)
+                                .on('tseuqer', function onTseuqer(e, response) {
+                                    if (response.signature === pack.signature) {
+                                        resolve(response.data);
+                                        $(self)
+                                            .off('tseuqer', onTseuqer);
+                                    }
+                                });
+                        }
+                    });
+            });
+        },
+
+        serialize: function (object) {
+            return JSON.stringify(object);
+        },
+
+        unserialize: function (string) {
+            return JSON.parse(string);
+        },
+
+        checkOtherStandOut: function () {
+            var standOutID = this.getSharedOptions('standOutID');
+            var self = this;
+
+            return new Promise(function (resolve, reject) {
+                if (!standOutID) {
+                    reject('NO_STANDOUT');
+                }
+                else {
+                    var pack = self.ping(standOutID);
+                    var resolved = false;
+
+                    function onPingBack(e, context) {
+                        if (context.signature === pack.signature) {
+                            resolve(standOutID);
+                            $(self)
+                                .off('gnip', onPingBack);
+
+                            resolved = true;
+                        }
+                    }
+
+                    $(self)
+                        .on('gnip', onPingBack);
+
+                    setTimeout(function () {
+                        if (!resolved) {
+                            reject('TIMEOUT');
+                            $(self)
+                                .off('gnip', onPingBack);
+                        }
+                    }, 1000);
+                }
+            });
+        },
+
+        standOut: function () {
+            var self = this;
+
+            return new Promise(function (resolve, reject) {
+                if (!self.isStandOut()) {
+                    self.checkOtherStandOut()
+                        .then(function (standOutID) {
+                            resolve(standOutID);
+                        })
+                        .catch(function (error) {
+                            self.standingOut = true;
+                            self.setSharedOptions('standOutID', self.uid);
+                            self._mediaConstructor && self._mediaConstructor();
+
+                            resolve(self.uid);
+                        });
+                }
+                else {
+                    resolve(self.uid);
+                }
+            });
+        },
+
+        isStandOut: function () {
+            return !!this.standingOut;
+        },
+
+        pullBack: function () {
+            if (this.isStandOut()) {
+                this.standingOut = false;
+                this.setSharedOptions('standOutID', 0);
+            }
+        },
+
+        destory: function () {
+            this.pullBack();
+            window.removeEventListener('storage', this.onStorage, false);
+        }
+    };
+})(window);
+
+var d = new SharedAdapter('local-namespace');
+
+function Socket() {
+    this.get = function () {
+        return Array.prototype.slice.call(arguments);
+    };
+}
+
+d.use(function () {
+    d.api = new Socket;
+});
+</script>
