@@ -1,3 +1,7 @@
+/**
+ * webworker is not shared over contexts
+ */
+
 function testRequest (event) {
 
     console.info(event.data);

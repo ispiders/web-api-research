@@ -77,6 +77,11 @@ class Spider {
         this.tasks.push(task);
     }
 
+    currentTask (): Task | undefined {
+
+        return this.tasks[0];
+    }
+
     next (): Task | undefined {
 
         let len = this.tasks.length;
@@ -101,7 +106,7 @@ class Spider {
 
     run (force?: boolean): void {
 
-        let task = this.next();
+        let task = this.currentTask();
 
         if (force) {
             this.paused = false;
@@ -110,11 +115,11 @@ class Spider {
         if (task) {
             this.getDocument(task.url, task.encoding).then((doc) => {
 
-                if (task) {
-                    task.parse(this, doc);
-                }
-
+                task.parse(this, doc);
                 this.finished++;
+            }).then(() => {
+
+                this.next();
 
                 if (!this.paused) {
                     setTimeout(() => {

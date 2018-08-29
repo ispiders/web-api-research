@@ -40,6 +40,9 @@ class Spider {
     addTask(task) {
         this.tasks.push(task);
     }
+    currentTask() {
+        return this.tasks[0];
+    }
     next() {
         let len = this.tasks.length;
         if (len) {
@@ -57,16 +60,16 @@ class Spider {
         this.paused = true;
     }
     run(force) {
-        let task = this.next();
+        let task = this.currentTask();
         if (force) {
             this.paused = false;
         }
         if (task) {
             this.getDocument(task.url, task.encoding).then((doc) => {
-                if (task) {
-                    task.parse(this, doc);
-                }
+                task.parse(this, doc);
                 this.finished++;
+            }).then(() => {
+                this.next();
                 if (!this.paused) {
                     setTimeout(() => {
                         this.run();

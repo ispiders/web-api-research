@@ -97,11 +97,11 @@ this.addEventListener('install', function (installEvent) {
 // activate
 this.addEventListener('activate', function (activateEvent) {
 
-    console.log('service worker activated', arguments);
+    console.log('service worker activated');
     activateEvent.waitUntil(Promise.all([
         clearCache(),
         self.clients.claim()
     ]));
 }, false);
 
-console.log('service worker in on', this);
+console.log('service worker in on');

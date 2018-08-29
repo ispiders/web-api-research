@@ -8,31 +8,117 @@
 <img src="https://timgsa.baidu.com/timg?image&quality=80&size=b9999_10000&sec=1492280700846&di=306058eaf5765aab22c845e7f62b4741&imgtype=0&src=http%3A%2F%2Fwww.xwcms.net%2FwebAnnexImages%2FfileAnnex%2F201506%2F19509%2Fkarate-highkick-icon.png">
 <script>
 
-    function register () {
+    let scope = '/web-api-research/workers/';
 
-        if (!navigator.serviceWorker.controller) {
+    function unregister (scope) {
+        navigator.serviceWorker.getRegistration(scope).then(function (registration) {
 
-            navigator.serviceWorker.register('./service-worker.js')
-            .then(function (worker) {
+            if (registration) {
+                registration.unregister().then(function () {
 
-                console.log('Registration succeeded, Scope is ' + worker.scope);
+                    console.info('ServiceWorker unregister');
+                });
+            }
+        });
+    }
 
-                return worker;
-            }).catch(function (error) {
+    function start (worker) {
 
-                console.error(error);
-            });
+        console.log('activated worker', worker)
+    }
 
-            navigator.serviceWorker.ready.then(function () {
+    function onRegistration (registration) {
 
-                console.log('serviceWorker ready')
-                location.reload();
-            });
+        let worker;
+
+        worker = registration.active;
+
+        if (worker && worker.state === 'activated') {
+            start(worker);
+
+            return;
         }
+        else {
+            if (worker && worker.state === 'redundant') {
+                worker = registration.installing;
+            }
+            else {
+                worker = worker || registration.installing;
+            }
+
+            worker.onstatechange = function (e) {
+
+                if (worker.state === 'activated') {
+                    start(registration.active);
+                }
+            };
+        }
+    }
+
+    function testRegistration (registration) {
+
+        console.info('Registration succeeded, Scope is ' + registration.scope);
+        console.info('registration.active', registration.active);
+        console.info('registration.installing', registration.installing);
+
+        if (registration.active && registration.active.state === 'activated') {
+            return registration.active;
+        }
+
+        let installingWorker = registration.active || registration.installing;
+
+        console.info('installingWorker', installingWorker.state);
+
+        return new Promise((resolve, reject) => {
+
+            let done = false;
+            installingWorker.onstatechange = function (e) {
+
+                let worker = e.target || installingWorker;
+
+                console.info('installingWorker', e)
+
+                console.info('onstatechange', worker.state);
+
+                if (worker.state === 'activated') {
+                    resolve(worker);
+                    done = true;
+                }
+                else if (worker.state === 'redundant') {
+                    reject(new Error('redundant worker'));
+                    done = true;
+                }
+            };
+
+            setTimeout(() => {
+                if (!done) {
+                    reject(new Error('register timeout'));
+                }
+            }, 3000);
+        });
+    }
+
+    function register (serviceWorker) {
+
+        serviceWorker.register('./service-worker.js', {scope: scope})
+        .then(onRegistration).catch(function (error) {
+
+            console.error(error);
+        });
     }
 
     if (!navigator.serviceWorker) {
         document.write('Your browser does not support service worker');
+    }
+    else {
+
+        if (navigator.serviceWorker.controller && navigator.serviceWorker.controller.state === 'activated') {
+            //
+        }
+        else {
+            register(navigator.serviceWorker);
+        }
+
     }
 
 </script>

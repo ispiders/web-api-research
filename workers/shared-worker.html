@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title></title>
+</head>
+<body>
+<script type="text/javascript">
+    // web worker
+    var worker = new SharedWorker('shared-worker.js');
+
+    worker.port.onmessage = function (e) {
+
+        console.error(e.data);
+    };
+
+    worker.port.start();
+
+    worker.port.postMessage('test')
+</script>
+</body>
+</html>
