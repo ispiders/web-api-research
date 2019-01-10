@@ -50,12 +50,41 @@ function mapColumns (colNames) {
 
 function getSelectedRanges () {
 
-    return window.immTableSheet.sheetHot.canvasView.excel.selectData.getSelect()[0];
+    if (window.immTableSheet) {
+        var ranges = window.immTableSheet.sheetHot.canvasView.excel.selectData.getSelect()[0];
+
+        return {
+            startColIndex: ranges.xRange[0],
+            endColIndex: ranges.xRange[1],
+
+            startRowIndex: ranges.yRange[0],
+            endRowIndex: ranges.yRange[1],
+        };
+    }
+    else if (window.SpreadsheetApp) {
+        return window.SpreadsheetApp.view.getSelection().rangeSelections[0];
+    }
+    else {
+        throw new Error('can not getSelectedRanges');
+    }
 }
 
 function getFullTableData () {
 
-    return window.immTableSheet.sheetHot.getStore().getState().get('dataSource').toJSON();
+    if (window.immTableSheet) {
+        return window.immTableSheet.sheetHot.getStore().getState().get('dataSource').toJSON();
+    }
+    else if (window.SpreadsheetApp) {
+
+        return SpreadsheetApp.spreadsheet.sheets[0].data.rowData.map((row) => {
+            return row.values.map((cell) => {
+                return cell.editValue;
+            });
+        });
+    }
+    else {
+        throw new Error('can not getFullTableData');
+    }
 }
 
 function getQQDocsSelectedData () {
@@ -65,14 +94,13 @@ function getQQDocsSelectedData () {
 
 function intersect (state, ranges) {
 
-    var {xRange, yRange} = ranges;
     var ret = [];
 
-    for (var i = yRange[0]; i <= yRange[1]; ++i) {
+    for (var i = ranges.startRowIndex; i <= ranges.endRowIndex; ++i) {
 
         var row = state[i];
 
-        ret.push(row.slice(xRange[0], xRange[1] + 1))
+        ret.push(row.slice(ranges.startColIndex, ranges.endColIndex + 1))
     }
 
     return ret;
@@ -87,7 +115,7 @@ function getTableData () {
     var totalQTY = 0;
     var totalCost = 0;
 
-    for (var i = Math.max(1, ranges.yRange[0]); i <= ranges.yRange[1]; ++i) {
+    for (var i = Math.max(1, ranges.startRowIndex); i <= ranges.endRowIndex; ++i) {
 
         var row = tableData[i];
 

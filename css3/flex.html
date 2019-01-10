@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>flex</title>
+    <style type="text/css">
+        .container {
+            display: flex;
+            background-color: black;
+            display: flex;
+            flex-flow: row wrap;
+            align-content: stretch;
+        }
+
+        .item {
+            box-sizing: border-box;
+            background-color: white;
+            flex: 0 0 20%;
+            height: 50px;
+            border: 1px solid red;
+        }
+
+        .grow {
+            height: 60px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="item"></div>
+        <div class="item"></div>
+        <div class="item grow"></div>
+        <div class="item"></div>
+        <div class="item"></div>
+        <div class="item"></div>
+        <div class="item"></div>
+        <div class="item grow"></div>
+        <div class="item"></div>
+        <div class="item"></div>
+    </div>
+</body>
+</html>
