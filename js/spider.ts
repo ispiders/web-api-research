@@ -175,9 +175,45 @@ function parseContent (this: TMenuTask, spider: Spider, doc: HTMLDocument) {
     });
 }
 
+function getEncoding () {
+
+    let charsetMeta = document.querySelector('meta[charset]');
+    let charset = 'utf-8';
+
+    if (charsetMeta) {
+        charset = charsetMeta.getAttribute('charset') || charset;
+    }
+    else {
+        let contentType = '';
+        let metaElements = document.querySelectorAll('meta');
+
+        for (let i = 0; i < metaElements.length; i++) {
+            let el = metaElements[i];
+            let equiv = el.getAttribute('http-equiv');
+
+            equiv = equiv ? equiv.toLowerCase() : '';
+
+            if (equiv === 'content-type') {
+                contentType = el.getAttribute('content') || '';
+                break;
+            }
+        }
+
+        if (contentType) {
+            let matches = contentType.match(/charset=(\S*)/);
+
+            if (matches && matches[1]) {
+                charset = matches[1];
+            }
+        }
+    }
+
+    return charset.toLowerCase();
+}
+
 let tasks: Task[] = [{
-    url: './',
-    encoding: 'gbk',
+    url: '',
+    encoding: getEncoding(),
     menuSelector: '#list a',
     contentSelector: '#content',
     parse: parseMenu
@@ -192,6 +228,6 @@ window.onbeforeunload = function () {
 //
 spider.run();
 
-spider.download((item) => {
+let d = () => spider.download((item) => {
     return item.title + '\n' + item.content + '\n';
 });
