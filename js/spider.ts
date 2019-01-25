@@ -142,17 +142,24 @@ class Spider {
 }
 
 interface TMenuTask extends Task {
-    menuSelector: string;
+    menuSelector: string | Element;
     contentSelector: string;
 }
 
 function parseMenu (this: TMenuTask, spider: Spider, doc: HTMLDocument): void {
 
-    let elems: NodeListOf<HTMLLinkElement> = doc.querySelectorAll(this.menuSelector);
+    let elems: NodeListOf<HTMLAnchorElement>;
+
+    if (typeof this.menuSelector === 'string') {
+        elems = doc.querySelectorAll(this.menuSelector);
+    }
+    else {
+        elems = this.menuSelector.querySelectorAll('a[href]');
+    }
 
     for (let i = 0; i < elems.length; ++i) {
 
-        let item: HTMLLinkElement = elems[i];
+        let item: HTMLAnchorElement = elems[i];
 
         spider.addTask({
             url: item.href,
@@ -211,10 +218,65 @@ function getEncoding () {
     return charset.toLowerCase();
 }
 
+function analizeMenu (boundary: number = 100) {
+    let links = document.querySelectorAll('a[href]');
+    let elementsMap = new WeakMap<Element, number>();
+    let elements: Element[] = [];
+
+    for (let i = 0; i < links.length; i++) {
+
+        let el = links[i].parentElement;
+
+        while (el && el.parentElement !== document.body) {
+            let count = elementsMap.get(el);
+
+            if (count) {
+                elementsMap.set(el, count + 1);
+                if (count === 1) {
+                    elements.push(el);
+                }
+            }
+            else {
+                elementsMap.set(el, 1);
+            }
+
+            el = el.parentElement;
+        }
+    }
+
+    let min = 0;
+    let ret: Element | undefined;
+
+    elements.forEach((el) => {
+        let count = elementsMap.get(el) || 0;
+
+        if (count > boundary) {
+            if (min) {
+                if (min > count) {
+                    min = count;
+                    ret = el;
+                }
+            }
+            else {
+                min = count;
+                ret = el;
+            }
+        }
+    });
+
+    console.log('possible menus', elements.map((el) => {
+        return [elementsMap.get(el), el];
+    }));
+
+    console.log('analized menu', ret);
+
+    return ret;
+}
+
 let tasks: Task[] = [{
     url: '',
     encoding: getEncoding(),
-    menuSelector: '#list a',
+    menuSelector: analizeMenu(),
     contentSelector: '#content',
     parse: parseMenu
 }];
