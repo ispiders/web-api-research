@@ -16,7 +16,7 @@ function readBlobText (blob: Blob, encoding: string): Promise<string> {
     return new Promise((resolve, reject) => {
 
         fr.onload = function () {
-            resolve(fr.result);
+            resolve(fr.result as string);
         };
 
         fr.onerror = function (e) {
@@ -106,13 +106,14 @@ class Spider {
 
     run (force?: boolean): void {
 
-        let task = this.currentTask();
+        const task = this.currentTask();
 
         if (force) {
             this.paused = false;
         }
 
         if (task) {
+
             this.getDocument(task.url, task.encoding).then((doc) => {
 
                 task.parse(this, doc);
@@ -143,7 +144,7 @@ class Spider {
 
 interface TMenuTask extends Task {
     menuSelector: string | Element;
-    contentSelector: string;
+    contentSelector: string | ((doc: Document) => string);
 }
 
 function parseMenu (this: TMenuTask, spider: Spider, doc: HTMLDocument): void {
@@ -173,12 +174,20 @@ function parseMenu (this: TMenuTask, spider: Spider, doc: HTMLDocument): void {
 
 function parseContent (this: TMenuTask, spider: Spider, doc: HTMLDocument) {
 
-    let el = doc.querySelector(this.contentSelector) as HTMLElement;
+    let content = '';
+
+    if (typeof this.contentSelector === 'string') {
+        let el = doc.querySelector(this.contentSelector) as HTMLElement;
+        content = el.innerText;
+    }
+    else {
+        content = this.contentSelector(doc)
+    }
 
     spider.state.push({
         url: this.url,
         title: this.title,
-        content: el.innerText
+        content: content
     });
 }
 
@@ -218,7 +227,7 @@ function getEncoding () {
     return charset.toLowerCase();
 }
 
-function analizeMenu (boundary: number = 100) {
+function analyseMenu (boundary: number = 100) {
     let links = document.querySelectorAll('a[href]');
     let elementsMap = new WeakMap<Element, number>();
     let elements: Element[] = [];
@@ -273,11 +282,36 @@ function analizeMenu (boundary: number = 100) {
     return ret;
 }
 
+function analyseContent (doc: HTMLDocument): string {
+
+    let boundary = 1000;
+    let els = doc.body.querySelectorAll<HTMLElement>('*');
+    let container: HTMLElement | null = null;
+    let tmp = 0;
+
+    for (let i = 0; i < els.length; i++) {
+        let el = els[i];
+        let text = el.innerText;
+
+        if (text.length > boundary && (!tmp || text.length < tmp)) {
+            tmp = text.length;
+            container = el;
+        }
+    }
+
+    if (container) {
+        return container.innerText;
+    }
+    else {
+        return '';
+    }
+}
+
 let tasks: Task[] = [{
     url: '',
     encoding: getEncoding(),
-    menuSelector: analizeMenu(),
-    contentSelector: '#content',
+    menuSelector: analyseMenu(),
+    contentSelector: analyseContent,
     parse: parseMenu
 }];
 
