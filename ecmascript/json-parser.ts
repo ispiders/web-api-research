@@ -75,56 +75,60 @@ function lexicalAnalysis (json: string) {
             }
             else if (/^[0-9-]$/.test(c)) { // number
                 token = 'number';
-                let reg = /-?(?:0|[1-9][0-9]*)(?:\.[0-9]+)?(?:[eE][+-]?[0-9]+)?/g;
-                reg.lastIndex = pos;
-                let match = reg.exec(json);
 
-                if (match && match.index === pos) {
-                    tokenValue = match[0];
+                tokenValue = c;
+                while (++pos < len) {
+                    c = json[pos];
+
+                    if (/^[-0-9\.eE]$/.test(c)) {
+                        tokenValue += c;
+                    }
+                    else {
+                        break;
+                    }
+                }
+
+                let reg = /^-?(?:0|[1-9][0-9]*)(?:\.[0-9]+)?(?:[eE][+-]?[0-9]+)?$/;
+
+                if (reg.test(tokenValue)) {
                     column += tokenValue.length;
-                    pos = reg.lastIndex;
 
                     return token;
                 }
                 else {
-                    throw new SyntaxError('unexpected token ' + c);
+                    throw new SyntaxError('unexpected token ' + c + ' at position ' + pos);
                 }
             }
-            else if (c === 't') { // true
-                token = 'true';
-                if (json.slice(pos, pos + 4) === 'true') {
-                    pos += 4;
-                    tokenValue = 'true';
+            else if (['t', 'f', 'n'].indexOf(c) !== -1) { // true false null
+
+                tokenValue = c;
+                while (++pos < len) {
+                    c = json[pos];
+                    if ('truefalsn'.split('').indexOf(c) !== -1) {
+                        tokenValue += c;
+                        if (tokenValue.length > 5) {
+                            throw new SyntaxError('unexpected token ' + c + ' at position ' + pos);
+                        }
+                    }
+                    else {
+                        break;
+                    }
+                }
+
+                if (tokenValue === 'true' || tokenValue === 'false') {
+                    token = 'boolean';
+                }
+                else if (tokenValue === 'null') {
+                    token = 'null';
                 }
                 else {
-                    throw new SyntaxError('unexpected token ' + c);
+                    throw new SyntaxError('unexpected token ' + c + ' at position ' + pos);
                 }
-                return token;
-            }
-            else if (c === 'f') { // false
-                token = 'false';
-                if (json.slice(pos, pos + 5) === 'false') {
-                    pos += 5;
-                    tokenValue = 'false';
-                }
-                else {
-                    throw new SyntaxError('unexpected token ' + c);
-                }
-                return token;
-            }
-            else if (c === 'n') { // null
-                token = 'null';
-                if (json.slice(pos, pos + 4) === 'null') {
-                    pos += 4;
-                    tokenValue = 'null';
-                }
-                else {
-                    throw new SyntaxError('unexpected token ' + c);
-                }
+
                 return token;
             }
             else {
-                throw new SyntaxError('unexpected token ' + c);
+                throw new SyntaxError('unexpected token ' + c + ' at position ' + pos);
             }
         }
 
@@ -132,6 +136,7 @@ function lexicalAnalysis (json: string) {
     }
 
     while (next()) {
+        console.log(token, '=', tokenValue, pos, 'of', len);
         if (pos > 1 << 53) {
             throw new Error('loop error');
             break;
