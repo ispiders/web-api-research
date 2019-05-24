@@ -41,7 +41,7 @@ function lexicalAnalysis (json: string) {
 
                 throw new SyntaxError('expect to close string at line: ' + line + ' column: ' + column);
             }
-            else if (c === ' ') {
+            else if (c === ' ' || c === '\t' || c === '\r') {
                 pos++;
                 column++;
                 continue;
