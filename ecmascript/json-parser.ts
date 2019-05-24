@@ -146,6 +146,10 @@ function lexicalAnalysis (json: string) {
 
 function parse (json: string) {
 
+    // this will make sure no scripts in json string
+    // but will still allow some invalid json to be evaluate
+    // for example: parse('{true: 1}')
+    // to fix this there should be grammar analysis before evaluate
     lexicalAnalysis(json);
 
     return eval('(' + json + ');');
