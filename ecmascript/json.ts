@@ -107,7 +107,7 @@ const stringify = function (
         return product;
     }
 
-    function serializeJSONArray (value: any[]) {
+    function serializeJSONArray (value: any[]): string {
         if (stack.indexOf(value) !== -1) {
             throw new TypeError('structure cyclical');
         }
@@ -133,7 +133,7 @@ const stringify = function (
             index += 1;
         }
 
-        let final;
+        let final: string;
         if (partial.length === 0) {
             final = '[]';
         }
@@ -152,7 +152,7 @@ const stringify = function (
         return final;
     }
 
-    function serializeJSONObject (value: object) {
+    function serializeJSONObject (value: object): string {
 
         if (stack.indexOf(value) !== -1) {
             throw new TypeError('structure cyclical');
@@ -168,7 +168,7 @@ const stringify = function (
         keys.forEach((key) => {
             let strP = serializeJSONProperty(key, value);
 
-            if (strP) {
+            if (strP !== undefined) {
                 let member = '"' + key + '":';
 
                 if (gap) {
@@ -180,7 +180,7 @@ const stringify = function (
             }
         });
 
-        let final;
+        let final: string;
         if (!partial.length) {
             final = '{}';
         }
@@ -199,7 +199,7 @@ const stringify = function (
         return final;
     }
 
-    function serializeJSONProperty (key: string, holder: any) {
+    function serializeJSONProperty (key: string, holder: any): string | undefined {
 
         let value = holder[key];
 
