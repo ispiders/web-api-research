@@ -1,3 +1,16 @@
+function progress(done, left) {
+    var currentTime = Date.now();
+    if (!progress.startTime) {
+        progress.startTime = currentTime;
+        progress.lastTime = currentTime;
+    }
+    else {
+        var timeLeft = (currentTime - progress.lastTime) * left;
+        var timeLeft1 = (currentTime - progress.startTime) / done * left;
+        progress.lastTime = currentTime;
+        console.log(done, '/', left, 'timeleft:', Math.round(timeLeft / 1000), Math.round(timeLeft1 / 1000));
+    }
+}
 function readURL(url, encoding) {
     if (encoding === void 0) { encoding = 'utf-8'; }
     return fetch(url).then(function (response) {
@@ -122,6 +135,7 @@ function parseContent(spider, doc) {
         title: this.title,
         content: content
     });
+    progress(spider.state.length, spider.tasks.length);
 }
 function getEncoding() {
     var charsetMeta = document.querySelector('meta[charset]');
@@ -227,6 +241,6 @@ window.onbeforeunload = function () {
 };
 //
 spider.run();
-var d = function () { return spider.download(function (item) {
-    return item.title + '\n' + item.content + '\n';
+var d = function () { return spider.download(function (item, index) {
+    return '第' + (index + 1) + '章' + item.title + '\n' + item.content + '\n';
 }); };

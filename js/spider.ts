@@ -1,3 +1,27 @@
+function progress (done: number, left: number) {
+    let currentTime = Date.now();
+
+    if (!progress.startTime) {
+        progress.startTime = currentTime;
+        progress.lastTime = currentTime;
+    }
+    else {
+        let timeLeft = (currentTime - progress.lastTime) * left;
+        let timeLeft1 = (currentTime - progress.startTime) / done * left;
+
+        progress.lastTime = currentTime;
+
+        console.log(
+            done,
+            '/',
+            left,
+            'timeleft:',
+            Math.round(timeLeft / 1000),
+            Math.round(timeLeft1 / 1000)
+        );
+    }
+}
+
 function readURL (url: string, encoding: string = 'utf-8'): Promise<string> {
 
     return fetch(url).then((response) => {
@@ -189,6 +213,8 @@ function parseContent (this: TMenuTask, spider: Spider, doc: HTMLDocument) {
         title: this.title,
         content: content
     });
+
+    progress(spider.state.length, spider.tasks.length);
 }
 
 function getEncoding () {
@@ -324,6 +350,6 @@ window.onbeforeunload = function () {
 //
 spider.run();
 
-let d = () => spider.download((item) => {
-    return item.title + '\n' + item.content + '\n';
+let d = () => spider.download((item, index) => {
+    return '第' + (index + 1) + '章' + item.title + '\n' + item.content + '\n';
 });
