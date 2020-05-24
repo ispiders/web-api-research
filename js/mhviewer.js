@@ -17,6 +17,12 @@ function getChapterList(id) {
         })
 }
 
+function loadImage (url) {
+    let img = new Image;
+
+    img.src = url;
+}
+
 function renderPage(result) {
     let imagelist = [];
 
@@ -24,7 +30,7 @@ function renderPage(result) {
         imagelist = imagelist.concat(item.imagelist);
     });
 
-    document.body.innerHTML = '<a id="nextImage" style="position: fixed; right: 0; bottom:0;">next</a>';
+    document.body.innerHTML = '<div style="position: fixed; right: 0; bottom:0; font-size: xx-large;"><input id="imgNum" value="" /><a id="nextImage">next</a>';
 
     let img = document.createElement('img');
 
@@ -38,7 +44,15 @@ function renderPage(result) {
     let i = 0;
     document.querySelector('#nextImage')
         .onclick = function () {
+            let imgNum = document.getElementById('imgNum').value;
+
+            if (imgNum) {
+                i = parseInt(imgNum) || 0;
+            }
+
             img.src = imagelist[++i];
+
+            loadImage(imagelist[i + 1]);
         };
 
 }
