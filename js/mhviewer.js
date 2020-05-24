@@ -30,7 +30,10 @@ function renderPage(result) {
         imagelist = imagelist.concat(item.imagelist);
     });
 
-    document.body.innerHTML = '<div style="position: fixed; right: 0; bottom:0; font-size: xx-large;"><input id="imgNum" value="" /><a id="nextImage">next</a>';
+    document.body.innerHTML = `<div style="position: fixed; right: 0; bottom:0; font-size: xx-large;">
+        <input id="imgNum" value="" />
+        <span id="info"></span><a id="nextImage">next</a>
+    </div>`;
 
     let img = document.createElement('img');
 
@@ -51,6 +54,8 @@ function renderPage(result) {
             }
 
             img.src = imagelist[++i];
+
+            document.getElementById('info').innerText = i + '/' + imagelist.length;
 
             loadImage(imagelist[i + 1]);
         };
