@@ -24,7 +24,7 @@ function renderPage(result) {
         imagelist = imagelist.concat(item.imagelist);
     });
 
-    document.body.innerHTML = '<a id="nextImage" style="position: fixed: right: 0; bottom:0;">next</a>';
+    document.body.innerHTML = '<a id="nextImage" style="position: fixed; right: 0; bottom:0;">next</a>';
 
     let img = document.createElement('img');
 
