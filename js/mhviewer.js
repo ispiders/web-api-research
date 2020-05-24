@@ -30,11 +30,6 @@ function renderPage(result) {
         imagelist = imagelist.concat(item.imagelist);
     });
 
-    document.body.innerHTML = `<div style="position: fixed; right: 0; bottom:0; font-size: xx-large;">
-        <input id="imgNum" value="" />
-        <span id="info"></span><a id="nextImage">next</a>
-    </div>`;
-
     let img = document.createElement('img');
 
     document.body.appendChild(img);0
@@ -47,22 +42,70 @@ function renderPage(result) {
     let i = 0;
     document.querySelector('#nextImage')
         .onclick = function () {
-            let imgNum = document.getElementById('imgNum').value;
+            let imgNum = parseInt(document.getElementById('imgNum').value) || 0;
 
-            if (imgNum) {
-                i = parseInt(imgNum) || 0;
+            if (imgNum !== i) {
+                i = imgNum;
+            }
+            else {
+                i = i + 1;
             }
 
-            img.src = imagelist[++i];
+            img.src = imagelist[i];
 
+            document.body.scrollTop = 0;
+            document.getElementById('imgNum').value = i;
             document.getElementById('info').innerText = i + '/' + imagelist.length;
 
             loadImage(imagelist[i + 1]);
         };
 
+    document.querySelector('#prevImage').onclick = function () {
+        let imgNum = parseInt(document.getElementById('imgNum').value) || 0;
+
+        if (imgNum !== i) {
+            i = imgNum;
+        }
+        else {
+            i = i - 1;
+        }
+
+        img.src = imagelist[i];
+
+        document.body.scrollTop = 0;
+        document.getElementById('imgNum').value = i;
+        document.getElementById('info').innerText = i + '/' + imagelist.length;
+
+        loadImage(imagelist[i - 1]);
+    };
+
 }
 
-getChapterList(1098)
-.then((r) => {
-    renderPage(r)
-});
+
+function render (id) {
+
+    getChapterList(id)
+    .then((r) => {
+        renderPage(r)
+    });
+}
+
+document.body.innerHTML = `<div style="position: fixed; right: 0; bottom:0; font-size: xx-large;">
+        <input id="id" value="" />
+        <input id="imgNum" value="0" />
+        <a id="prevImage">prev</a>
+        <span id="info"></span>
+        <a id="nextImage">next</a>
+    </div>`;
+
+
+let id = '';
+document.getElementById('id').onchange = function (e) {
+
+    let newID = parseInt(e.target.value) || '';
+
+    if (newID && newID !== id) {
+        id = newID;
+        render(id);
+    }
+}
