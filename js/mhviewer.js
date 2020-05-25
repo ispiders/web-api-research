@@ -30,7 +30,7 @@ function renderPage(result) {
         imagelist = imagelist.concat(item.imagelist);
     });
 
-    let img = document.createElement('img');
+    let img = document.getElementById('img');
 
     document.body.appendChild(img);0
 
@@ -38,6 +38,10 @@ function renderPage(result) {
     img.style = 'width: 100%;';
 
     img.src = imagelist[0];
+
+    img.onload = function () {
+        document.getElementById('loading').innerHTML = '';
+    };
 
     let i = 0;
     document.querySelector('#nextImage')
@@ -53,6 +57,7 @@ function renderPage(result) {
 
             img.src = imagelist[i];
 
+            document.getElementById('loading').innerHTML = 'loading';
             document.body.scrollTop = 0;
             document.getElementById('imgNum').value = i;
             document.getElementById('info').innerText = i + '/' + imagelist.length;
@@ -72,6 +77,7 @@ function renderPage(result) {
 
         img.src = imagelist[i];
 
+        document.getElementById('loading').innerHTML = 'loading';
         document.body.scrollTop = 0;
         document.getElementById('imgNum').value = i;
         document.getElementById('info').innerText = i + '/' + imagelist.length;
@@ -90,11 +96,11 @@ function render (id) {
     });
 }
 
-document.body.innerHTML = `<div style="position: fixed; right: 0; bottom:0; font-size: xx-large;">
+document.body.innerHTML = `<img id="img" /><div style="position: fixed; right: 0; bottom:0; font-size: xx-large;">
         <input id="id" value="" />
         <input id="imgNum" value="0" />
         <a id="prevImage">prev</a>
-        <span id="info"></span>
+        <span id="loading"></span><span id="info"></span>
         <a id="nextImage">next</a>
     </div>`;
 
