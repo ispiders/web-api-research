@@ -23,7 +23,84 @@ function loadImage (url) {
     img.src = url;
 }
 
-function renderPage(result) {
+function showLoading () {
+    document.getElementById('loading').innerHTML = 'loading';
+}
+
+function hideLoading () {
+    document.getElementById('loading').innerHTML = '';
+}
+
+function renderChapter (result, i) {
+
+    let chapter = result.list[i];
+    let content = document.getElementById('content');
+
+    content.innerHTML = '';
+
+    let loading = 0;
+
+    chapter.imagelist.forEach((url) => {
+
+        let img = document.createElement('img');
+
+        img.src = url;
+        img.style.width = '100%';
+
+        content.appendChild(img);
+        loading += 1;
+
+        img.onload = () => {
+            loading -= 1;
+
+            if (loading === 0) {
+                hideLoading();
+            }
+
+            img.onload = null;
+        };
+    });
+
+    document.getElementById('scrollWrapper').scrollTop = 0;
+    document.getElementById('imgNum').value = i;
+    document.getElementById('info').innerText = i + '/' + result.list.length;
+    showLoading();
+}
+
+function renderList (result, i, renderMethod) {
+
+    let page = i;
+
+    document.querySelector('#nextImage').onclick = function () {
+        let imgNum = parseInt(document.getElementById('imgNum').value) || 0;
+
+        if (imgNum !== page) {
+            page = imgNum;
+        }
+        else {
+            page = page + 1;
+        }
+
+        renderMethod(result, page);
+    };
+
+    document.querySelector('#prevImage').onclick = function () {
+        let imgNum = parseInt(document.getElementById('imgNum').value) || 0;
+
+        if (imgNum !== page) {
+            page = imgNum;
+        }
+        else {
+            page = page - 1;
+        }
+
+        renderMethod(result, page);
+    };
+
+    renderMethod(result, page);
+}
+
+function renderImage(result, i) {
     let imagelist = [];
 
     result.list.forEach((item) => {
@@ -32,59 +109,13 @@ function renderPage(result) {
 
     let img = document.getElementById('img');
 
-    document.body.appendChild(img);0
-
-    document.body.style = "overflow: scroll";
     img.style = 'width: 100%;';
 
-    img.src = imagelist[0];
+    img.src = imagelist[i];
 
-    img.onload = function () {
-        document.getElementById('loading').innerHTML = '';
-    };
+    img.onload = hideLoading;
 
-    let i = 0;
-    document.querySelector('#nextImage')
-        .onclick = function () {
-            let imgNum = parseInt(document.getElementById('imgNum').value) || 0;
-
-            if (imgNum !== i) {
-                i = imgNum;
-            }
-            else {
-                i = i + 1;
-            }
-
-            img.src = imagelist[i];
-
-            document.getElementById('loading').innerHTML = 'loading';
-            document.body.scrollTop = 0;
-            document.getElementById('imgNum').value = i;
-            document.getElementById('info').innerText = i + '/' + imagelist.length;
-
-            loadImage(imagelist[i + 1]);
-        };
-
-    document.querySelector('#prevImage').onclick = function () {
-        let imgNum = parseInt(document.getElementById('imgNum').value) || 0;
-
-        if (imgNum !== i) {
-            i = imgNum;
-        }
-        else {
-            i = i - 1;
-        }
-
-        img.src = imagelist[i];
-
-        document.getElementById('loading').innerHTML = 'loading';
-        document.body.scrollTop = 0;
-        document.getElementById('imgNum').value = i;
-        document.getElementById('info').innerText = i + '/' + imagelist.length;
-
-        loadImage(imagelist[i - 1]);
-    };
-
+    loadImage(imagelist[i - 1]);
 }
 
 
@@ -92,17 +123,22 @@ function render (id) {
 
     getChapterList(id)
     .then((r) => {
-        renderPage(r)
+        renderList(r, 0, renderChapter);
     });
 }
 
-document.body.innerHTML = `<img id="img" /><div style="position: fixed; right: 0; bottom:0; font-size: xx-large;">
+document.body.style = "overflow: hidden";
+document.body.innerHTML = `<div id="scrollWrapper" style="position: fixed; left:0;top:0;width:100%;height:100%;overflow:scroll;">
+    <img id="img" />
+    <div id="content"></div>
+    <div style="position: fixed; right: 0; bottom:0; font-size: xx-large;">
         <input id="id" value="" />
         <input id="imgNum" value="0" />
         <a id="prevImage">prev</a>
         <span id="loading"></span><span id="info"></span>
         <a id="nextImage">next</a>
-    </div>`;
+    </div>
+</div>`;
 
 
 let id = '';
