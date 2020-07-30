@@ -1,6 +1,6 @@
 # compiled output
-/dist
-/tmp
+dist
+tmp
 
 # dependencies
 /node_modules
