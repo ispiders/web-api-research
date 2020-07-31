@@ -11,6 +11,7 @@
     "web_accessible_resources": [
         "logo.svg",
         "template.css",
+        "template.html",
         "common.js",
         "qq.excel.js"
     ],

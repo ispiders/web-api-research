@@ -60,122 +60,20 @@ function ticketTableHTML () {
     return html;
 }
 
-var template = `
-<!DOCTYPE html>
-<html>
-<head>
-    <title></title>
-    <meta charset="utf-8" />
-    <link id="template-style" rel="stylesheet" type="text/css" href="template.css"></link>
-</head>
-<body>
+var template = '';
 
-<p class="logo"><img src="logo.svg" width="30%"></p>
-
-<h1>Commercial Invoice</h1>
-
-<p><input id="sn" type="text" value="" /></p>
-
-<p></p>
-
-<div>
-    <table class="ticket-detail" border>
-        <thead>
-            <tr>
-                <th width="20%">Shipper/Exporter</th>
-                <th width="30%">Jen Zhang</th>
-                <th width="20%">Consignee</th>
-                <th width="30%">Carlo de Cillis</th>
-            </tr>
-        </thead>
-        <tbody>
-            <tr>
-                <td>Company Name:</td>
-                <td>A-assistant Co.Ltd</td>
-                <td>Company Name:</td>
-                <td>2ME style</td>
-            </tr>
-            <tr>
-                <td>Tel:</td>
-                <td>+86 13631668463</td>
-                <td>Tel:</td>
-                <td>+39 02 39663300</td>
-            </tr>
-            <tr>
-                <td>Email:</td>
-                <td>jen@a-assistant.com</td>
-                <td>Email:</td>
-                <td>c.decillis@2mestyle.com</td>
-            </tr>
-            <tr>
-                <td>Address:</td>
-                <td>F/1st, Office building, Liju 13th Tech Park, Zhongxin Industrial area, Shipai Town</td>
-                <td>Address:</td>
-                <td>2ME STYLE S.R.L. VIA RISORGIMENTO 44</td>
-            </tr>
-            <tr>
-                <td>City, State Zip Code:</td>
-                <td>Dongguan City 523332, China</td>
-                <td>City, State Zip Code:</td>
-                <td>20017 - RHO (FRAZ.MAZZO)</td>
-            </tr>
-            <tr>
-                <td>Date:</td>
-                <td id="print-date"></td>
-                <td>Terms: </td>
-                <td>EXW</td>
-            </tr>
-        </tbody>
-    </table>
-</div>
-
-<p></p>
-
-<div class="order-detail">
-    <table>
-        <tr>
-            <th>Name</th>
-            <th>HS code</th>
-            <th>Price</th>
-            <th>QTY</th>
-        </tr>
-
-        <tr>
-            <td>2ME handle case 4.7</td>
-            <td>420291</td>
-            <td>5.3</td>
-            <td>13</td>
-        </tr>
-        <tr>
-            <td>2ME handle case 5.5</td>
-            <td>420291</td>
-            <td>5.4</td>
-            <td>11</td>
-        </tr>
-        <tr>
-            <td>Pa Poster women Pink</td>
-            <td>420291</td>
-            <td>5.8</td>
-            <td>30</td>
-        </tr>
-        <tr>
-            <td></td>
-            <td></td>
-            <td></td>
-            <td>43</td>
-        </tr>
-    </table>
-</div>
-
-<p>Sincerely yours,</p>
-
-<p>A-assistant Company Ltd.</p>
-
-</body>
-</html>
-`;
+if (window.isExtension) {
+    fetch(chrome.extension.getURL('template.html')).then((r) => r.text()).then((html) => {
+        template = html;
+    });
+}
 
 function openWindow (data) {
+
+    if (!template) {
+        alert('请等待模板加载');
+        return;
+    }
 
     var win = window.open('', '', 'width=1280,height=800');
 
