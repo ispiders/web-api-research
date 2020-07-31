@@ -18,7 +18,7 @@ chrome.extension.onRequest.addListener(function (request, sender, sendResponse) 
     sendResponse('received');
 });
 
-function loadScript (src, callback) {
+function loadScript (src, callback, onError) {
 
     var script = document.createElement('script');
 
@@ -27,12 +27,15 @@ function loadScript (src, callback) {
     document.body.appendChild(script);
 
     script.onload = callback;
+    script.onerror = onError;
 }
 
+// content_scripts 只能访问 DOM 但是没法访问 window 对象
+// 于是通过动态插入js来访问 window
 window.addEventListener('load', function () {
 
-    var common = 'https://ispiders.github.io/web-api-research/chrome-extension-demo/common.js';
-    var excel = 'https://ispiders.github.io/web-api-research/chrome-extension-demo/qq.excel.js';
+    var common = chrome.extension.getURL('common.js');
+    var excel = chrome.extension.getURL('qq.excel.js');
 
     loadScript(common, function () {
         loadScript(excel);

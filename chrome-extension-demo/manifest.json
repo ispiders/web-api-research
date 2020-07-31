@@ -1,6 +1,6 @@
 {
     "name": "online print",
-    "version": "1.3.1",
+    "version": "1.4.0",
     "manifest_version": 2,
     "description": "online excel print",
     "update_url": "http://0.0.0.0",
@@ -10,7 +10,9 @@
     },
     "web_accessible_resources": [
         "logo.svg",
-        "template.css"
+        "template.css",
+        "common.js",
+        "qq.excel.js"
     ],
     "permissions": ["*://chaojibiaoge.com/*", "*://docs.qq.com/*"],
     "browser_action":

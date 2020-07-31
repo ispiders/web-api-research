@@ -258,10 +258,14 @@ function preview (data) {
 
 window.addEventListener('keydown', function (event) {
 
+    if (window.isExtension) {
+        return;
+    }
+
     if (event.key === 'p' && (event.ctrlKey || event.metaKey)) {
         event.preventDefault();
 
-        preview();
+        dispatchEvent('get-excel-data');
     }
 }, false);
 
