@@ -10,7 +10,20 @@ function unique<T> (arr: T[]): T[] {
         }
 
         return ret;
-    }, []);
+    }, [] as T[]);
+}
+
+function parseJSON (text: string) {
+    let json;
+
+    try {
+        json = JSON.parse(text);
+    }
+    catch (e) {
+        json = eval('(' + text + ')');
+    }
+
+    return json;
 }
 
 function download (text: string | object, name: string = 'download.txt') {
@@ -63,14 +76,52 @@ function parseHTML (text: string): HTMLDocument {
     return parser.parseFromString(text, 'text/html');
 }
 
+function setBaseUrl (doc: HTMLDocument, baseUrl: string, force: boolean = false) {
+
+    let base = doc.querySelector('base');
+
+    if (base && !force) {
+        return;
+    }
+
+    if (baseUrl[baseUrl.length - 1] !== '/') {
+        baseUrl += '/';
+    }
+
+    if (!base) {
+        base = doc.createElement('base');
+
+        let head = doc.querySelector('head');
+
+        if (head) {
+            head.appendChild(base);
+        }
+        else {
+            doc.appendChild(base);
+            console.error('doc does not have a head element');
+        }
+    }
+
+    base.href= baseUrl;
+}
+
 interface TMatchFunction {
     (url: string): boolean;
 }
 
-interface Rule {
+interface TextRule {
     match: RegExp | TMatchFunction;
+    dataType: 'text';
+    parse: (spider: Spider, doc: string, task: string) => void;
+}
+
+interface HTMLRule {
+    match: RegExp | TMatchFunction;
+    dataType?: 'html';
     parse: (spider: Spider, doc: HTMLDocument, task: string) => void;
 }
+
+type Rule = TextRule | HTMLRule;
 
 class Spider {
 
@@ -78,13 +129,20 @@ class Spider {
     tasks: string[];
     state: object;
     index: number = 0;
-    interval: number = 200;
+    interval: number = 500;
     paused: boolean = false;
 
     constructor () {
         this.rules = [];
         this.tasks = [];
         this.state = {};
+
+        this.preventUnload();
+    }
+
+    preventUnload () {
+
+        window.onbeforeunload = () => true;
     }
 
     addTask (task: string): void {
@@ -111,6 +169,19 @@ class Spider {
         return false;
     }
 
+    getText (url: string, encoding: string = 'utf-8'): Promise<string> {
+
+        return readURL(url, encoding);
+    }
+
+    getJSON (url: string, encoding: string = 'utf-8'): Promise<any> {
+
+        return readURL(url, encoding).then((text) => {
+
+            return parseJSON(text);
+        });
+    }
+
     getDocument (url: string, encoding: string = 'utf-8'): Promise<HTMLDocument> {
         return readURL(url, encoding)
             .then((text) => {
@@ -127,7 +198,7 @@ class Spider {
         this.rules.push(rule);
     }
 
-    parse (doc: HTMLDocument, task: string) {
+    parse (text: string, task: string) {
 
         this.rules.forEach((rule) => {
 
@@ -135,7 +206,13 @@ class Spider {
                     || typeof rule.match === 'function' && rule.match(task)) {
 
                 if (rule.parse) {
-                    rule.parse(this, doc, task);
+
+                    if (rule.dataType === 'text') {
+                        rule.parse(this, text, task);
+                    }
+                    else {
+                        rule.parse(this, parseHTML(text), task);
+                    }
                 }
             }
         });
@@ -151,127 +228,33 @@ class Spider {
 
         if (task) {
 
-            this.getDocument(task).then((doc) => {
+            this.getText(task).then((text) => {
 
-                this.parse(doc, task);
+                this.parse(text, task);
             }).then(() => {
 
-                if (this.next() && !this.paused) {
+                let hasNext = this.next();
+
+                if (hasNext && !this.paused) {
                     setTimeout(() => {
                         this.run();
                     }, this.interval);
                 }
+                else if (!hasNext) {
+                    this.finished();
+                }
             });
         }
+        else {
+            this.finished();
+        }
+    }
+
+    finished (): boolean {
+
+        console.log('finished ' + this.index + '/' + this.tasks.length + ' tasks');
+
+        return this.index >= this.tasks.length;
     }
 }
 
-/* =========================================================================== */
-
-let spider = new Spider();
-
-spider.addRule({
-    match: /\/mnks\/[abce]km[14]\/sxlx\/?$/i,
-    parse: (spider: Spider, doc: HTMLDocument, url: string) => {
-
-        let reg = /ids\s*=\s*(['"])([\d,]+)\1/;
-        let scripts = doc.querySelectorAll('script');
-        let ids = '';
-
-        for (let i = 0; i < scripts.length; i++) {
-            let s = scripts[i];
-
-            let m = s.innerHTML.match(reg);
-
-            if (m) {
-                ids = m[2];
-                break;
-            }
-        }
-
-        let data = {
-            url: url,
-            ids: ids
-        };
-
-        spider.state.qids.push(data);
-    }
-});
-
-spider.addRule({
-    match: /\/mnks\/[abce]km[14]\/z[jx]lx\/\d+\/?$/i,
-    parse: (spider: Spider, doc: HTMLDocument, url: string) => {
-
-        let reg = /arrnowids\s*=\s*([\[\],\d+'"]+)/;
-        let scripts = doc.querySelectorAll('script');
-        let ids = '';
-
-        for (let i = 0; i < scripts.length; i++) {
-            let s = scripts[i];
-
-            let m = s.innerHTML.match(reg);
-
-            if (m) {
-                ids = m[1];
-                break;
-            }
-        }
-
-        let arr = JSON.parse(ids.replace(/'/g, '"'));
-
-        let data = {
-            url: url,
-            ids: arr.reduce((ret, a) => {
-                return ret.concat(a);
-            }, [])
-        };
-
-        spider.state.qids.push(data);
-    }
-});
-
-spider.addRule({
-    match: /\/mnks\/[abce]km[14]\/z[jx]lx\/?$/i,
-    parse: (spider: Spider, doc: HTMLDocument, url: string) => {
-
-        let links = doc.querySelectorAll('a[href]');
-
-        let ls = [];
-
-        for (let i = 0; i < links.length; i++) {
-            let a = links[i];
-
-            if (/\/mnks\/[abce]km[14]\/z[jx]lx\/\d+\/?$/i.test(a.href)) {
-                ls.push(a);
-            }
-        }
-
-        let data = ls.map((a) => {
-
-            spider.addTask(a.href);
-
-            return {
-                url: a.href,
-                title: a.querySelector('.title').textContent
-            };
-        });
-
-        spider.state.cats.push(data);
-    }
-});
-
-['a', 'b', 'c', 'e'].forEach((car) => {
-
-    ['1', '4'].forEach((km) => {
-        spider.addTask(`http://m.jxedt.com/mnks/${car}km${km}/sxlx/`);
-        spider.addTask(`http://m.jxedt.com/mnks/${car}km${km}/zjlx/`);
-        spider.addTask(`http://m.jxedt.com/mnks/${car}km${km}/zxlx/`);
-    });
-});
-
-spider.state = {
-    qids: [],
-    cats: []
-};
-
-// spider.run();

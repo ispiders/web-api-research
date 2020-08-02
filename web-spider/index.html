@@ -1,0 +1,77 @@
+<meta charset="utf-8" />
+<script type="text/javascript" src="dist/import.js"></script>
+<script type="text/javascript">
+
+function unique(arr) {
+    let map = new Map();
+    return arr.reduce((ret, item) => {
+        if (!map.get(item)) {
+            map.set(item, true);
+            ret.push(item);
+        }
+        return ret;
+    }, []);
+}
+function parseJSON(text) {
+    let json;
+    try {
+        json = JSON.parse(text);
+    }
+    catch (e) {
+        json = eval('(' + text + ')');
+    }
+    return json;
+}
+function download(text, name = 'download.txt') {
+    if (typeof text !== 'string') {
+        text = JSON.stringify(text, null, 4);
+    }
+    let file = new File([text], name);
+    let a = document.createElement('a');
+    a.download = name;
+    a.href = URL.createObjectURL(file);
+    a.click();
+}
+
+function getQids (state) {
+    let qids = [];
+
+    state.qids.forEach((item) => {
+        qids = qids.concat(item.ids);
+    });
+
+    qids = qids.map((id) => {
+        return parseInt(id);
+    });
+
+    qids = unique(qids);
+
+    qids = qids.sort((a, b) => a - b);
+
+    window.qids = qids;
+}
+
+Promise.all([
+    fetch('../../data/mnks-cats.json').then(r => r.json()),
+    fetch('../../data/zgzks-cats.json').then(r => r.json())
+]).then(([mnks, zgzks]) => {
+
+    return {
+        qids: mnks.qids.concat(zgzks.qids),
+        cats: mnks.cats.concat(zgzks.cats)
+    };
+}).then((state) => {
+
+    getQids(state);
+    generateTags(state);
+
+    window.tagSql = generateTagsSql(tags);
+
+    let {qids, qidMap} = generateQidMap(state);
+
+    fetch('../../data/questions.json').then(r => r.json()).then((questions) => {
+
+        window.questionSql = generateQuestionSql(questions, qidMap, tagMap);
+    });
+});
+</script>

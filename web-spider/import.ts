@@ -43,13 +43,21 @@ let tagMap = {};
 let tagID = 10;
 let subjectNames = {
     '1': '科目一',
-    '4': '科目四'
+    '4': '科目四',
+    'zgz': '资格证'
 };
+// ky|hy|wxp|jl|czc|wyc
 let carNames = {
     'a': '客车',
     'b': '货车',
     'c': '小车',
     'e': '摩托车',
+    'ky': '客运',
+    'hy': '货运',
+    'wxp': '危险品',
+    'jl': '教练',
+    'czc': '出租车',
+    'wyc': '网约车'
 };
 let groupNames = {
     'sxlx': '顺序练习',
@@ -68,11 +76,11 @@ function parseTags (car: string, km: string, group: string, chapter: string) {
 
     let subject = 'km' + km;
     let bank = subject + '-car' + car;
-    let typeGroup = subject + '-' + bank + '-' + group;
+    let typeGroup = bank + '-' + group;
     let type: string | undefined = undefined;
 
     if (chapter) {
-        type = subject + '-' + bank + '-' + group + '-' + chapter;
+        type = bank + '-' + group + '-' + chapter;
     }
 
     let tags = {
@@ -109,7 +117,7 @@ function createTag (tags: TTag[], car: string, km: string, group: string, chapte
 
     if (!bankTag) {
         bankTag = tagMap[bank] = {
-            pid: 0,
+            pid: subjectTag.id,
             id: tagID++,
             type: 'bank',
             name: carNames[car] + subjectTag.name
@@ -151,24 +159,52 @@ function createTag (tags: TTag[], car: string, km: string, group: string, chapte
     }
 }
 
+let mnksReg = /\/([abce])km([14])\/(z[jx]lx)(?:\/(\d+))?/i;
+let zgzksReg = /\/(ky|hy|wxp|jl|czc|wyc)\/(z[jx]lx)(?:\/(\d+))?/i;
+
 function generateTags (state) {
 
-    let catreg = /\/mnks\/([abce])km([14])\/(z[jx]lx|sxlx)(?:\/(\d+))?/i;
-    let cats = state.cats.reduce((ret, item) => ret.concat(item), []);
-
-    cats = cats.map((item, index) => {
-
-        let match = item.url.match(catreg);
+    let cats = state.cats.map((item, index) => {
 
         let cat = {
-            car: match[1],
-            km: match[2],
-            group: match[3],
-            chapter: match[4],
-            title: item.title
+            car: '',
+            km: '',
+            group: '',
+            chapter: '',
+            title: ''
         };
 
-        createTag(tags, cat.car, cat.km, cat.group, cat.chapter, cat.title);
+        if (mnksReg.test(item.url)) {
+
+            let match = item.url.match(mnksReg);
+
+            cat = {
+                car: match[1],
+                km: match[2],
+                group: match[3],
+                chapter: match[4],
+                title: item.title
+            };
+
+            createTag(tags, cat.car, cat.km, cat.group, cat.chapter, cat.title);
+        }
+        else if (zgzksReg.test(item.url)) {
+
+            let match = item.url.match(zgzksReg);
+
+            cat = {
+                car: match[1],
+                km: 'zgz',
+                group: match[2],
+                chapter: match[3],
+                title: item.title
+            };
+
+            createTag(tags, cat.car, cat.km, cat.group, cat.chapter, cat.title);
+        }
+        else {
+            console.error('unmatched url: ' + item.url);
+        }
 
         return cat;
     });
@@ -185,7 +221,7 @@ function safeSql (str) {
 
 function generateTagsSql (tags) {
 
-    let sql = 'insert into `dd_tags` (`pid`, `id`, `type`, `name`) values \n';
+    let sql = 'truncate table `dd_tags`;\ninsert into `dd_tags` (`pid`, `id`, `type`, `name`) values \n';
 
     sql += '(0, 1, \'cate\', \'判断题\'), \n';
     sql += '(0, 2, \'cate\', \'单选题\'), \n';
@@ -196,28 +232,57 @@ function generateTagsSql (tags) {
         return '(' + [tag.pid, tag.id, safeSql(tag.type), safeSql(tag.name)].join(',') + ')';
     });
 
-    return sql + values.join(',\n');
+    return sql + values.join(',\n') + ';';
+}
+
+function parseUrl (url: string) {
+
+    let cat = {
+        car: '',
+        km: '',
+        group: '',
+        chapter: ''
+    };
+
+    if (mnksReg.test(url)) {
+
+        let match = url.match(mnksReg);
+
+        cat = {
+            car: match[1],
+            km: match[2],
+            group: match[3],
+            chapter: match[4]
+        };
+    }
+    else if (zgzksReg.test(url)) {
+
+        let match = url.match(zgzksReg);
+
+        cat = {
+            car: match[1],
+            km: 'zgz',
+            group: match[2],
+            chapter: match[3]
+        };
+    }
+    else {
+        console.error('unmatched url ', url);
+    }
+
+    return cat;
 }
 
 function generateQidMap (state) {
-
-    let catreg = /\/mnks\/([abce])km([14])\/(z[jx]lx|sxlx)(?:\/(\d+))?/i;
 
     let qids = [];
     let qidMap = {};
 
     state.qids.forEach((item, index) => {
 
-        let match = item.url.match(catreg);
-        let tags = parseTags(match[1], match[2], match[3], match[4]);
-        let ids = [];
-
-        if (typeof item.ids === 'string') {
-            ids = item.ids.split(',');
-        }
-        else {
-            ids = item.ids;
-        }
+        let cat = parseUrl(item.url);
+        let tags = parseTags(cat.car, cat.km, cat.group, cat.chapter);
+        let ids = item.ids;
 
         ids.forEach((qid) => {
 
@@ -275,41 +340,49 @@ function getQuestionTag (qid, qidMap, tagMap) {
 
 function generateQuestionSql (questions, qidMap, tagMap) {
 
-    let sql = 'insert into `dd_question`'
+    let sql = 'truncate table `dd_question`;\ninsert into `dd_question`'
     + '(`id`,`cate`,`subject`,`bank`,`type`,`title`,`option1`,`option2`,`option3`,`option4`,`anwser`,`media`,`tips`,`anwser_img`,`keywords`,`speech_exa`)'
     + ' values ';
     let qids = Object.keys(questions).sort((a, b) => a - b);
 
-    let values = qids.map((id) => {
+    let values = questions.map((q) => {
 
-        let q = questions[id];
-        let tag = getQuestionTag(id, qidMap, tagMap);
+        let tag = getQuestionTag(q.id, qidMap, tagMap);
+
+        if (q.Type === '1') { // 判断题
+            if (!q.a) {
+                q.a = '正确';
+            }
+
+            if (!q.b) {
+                q.b = '错误';
+            }
+        }
 
         return '(' + [
-            id,
-            safeSql(q.type),
+            q.id,
+            safeSql(q.Type),
             safeSql(tag.subject),
             safeSql(tag.bank),
             safeSql(tag.type),
             safeSql(q.question),
-            safeSql(q.an1),
-            safeSql(q.an2),
-            safeSql(q.an3),
-            safeSql(q.an4),
-            safeSql(q.answertrue.split('').join(',')),
+            safeSql(q.a),
+            safeSql(q.b),
+            safeSql(q.c),
+            safeSql(q.d),
+            safeSql(q.ta.split('').map(n => n - 1).join(',')), // 答案 index 两边计数方式不一样
             safeSql(q.imageurl),
-            safeSql(q.explain),
+            safeSql(q.bestanswer),
             safeSql(''),
             safeSql(''),
-            safeSql(q.explain)
+            safeSql(q.bestanswer)
         ].join(',') + ')';
     });
 
-    return sql + values.join(',\n');
+    return sql + values.join(',\n') + ';';
 }
 
-
-function run () {
+function loadFromLocal () {
 
     return fetch('./data/jxedt.json').then(r => r.json()).then((state) => {
 
@@ -336,9 +409,4 @@ function run () {
     });
 }
 
-let state = run();
-
-// fetch('./data/jxedt.json').then(r => r.json()).then(j => window.s = j);
-// fetch('./data/questions.json').then(r => r.json()).then(j => window.qs = j);
-// fetch('./data/tag-map.json').then(r => r.json()).then(j => window.tagMap = j);
-// fetch('./data/qid-map.json').then(r => r.json()).then(j => window.qidMap = j);
+// let state = loadFromLocal();
