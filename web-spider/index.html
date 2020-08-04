@@ -72,6 +72,8 @@ Promise.all([
     fetch('../../data/questions.json').then(r => r.json()).then((questions) => {
 
         window.questionSql = generateQuestionSql(questions, qidMap, tagMap);
+
+        window.questionDoc = generateQuesitonsDoc(questions);
     });
 });
 </script>

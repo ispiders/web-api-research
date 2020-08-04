@@ -382,31 +382,78 @@ function generateQuestionSql (questions, qidMap, tagMap) {
     return sql + values.join(',\n') + ';';
 }
 
-function loadFromLocal () {
+function generateQuesitonsDoc (questions) {
 
-    return fetch('./data/jxedt.json').then(r => r.json()).then((state) => {
+    let html = `<!doctype html>
+    <html>
+    <head>
+        <meta charset="utf-8" />
+        <style>
+            .active {color: green;}
+        </style>
+    </head>
+    <body>`;
+    let total = questions.length;
 
-        generateTags(state);
+    questions.forEach((q, index) => {
 
-        state.tagSql = generateTagsSql(tags);
+        let img = '';
 
-        return state;
-    }).then(state => {
-        let {qids, qidMap} = generateQidMap(state);
+        if (q.imageurl) {
+            img = `<img src="${q.imageurl}" />`;
+        }
 
-        state.questionIds = qids;
-        state.qidMap = qidMap;
+        let answers = q.ta.split('').map(n => n - 1);
 
-        return state;
-    }).then(state => {
+        let a = answers.indexOf(0) !== -1 ? 'active' : '';
+        let b = answers.indexOf(1) !== -1 ? 'active' : '';
+        let c = answers.indexOf(2) !== -1 ? 'active' : '';
+        let d = answers.indexOf(3) !== -1 ? 'active' : '';
 
-        return fetch('./data/questions.json').then(r => r.json()).then((questions) => {
-
-            state.questionSql = generateQuestionSql(questions, state.qidMap, tagMap);
-
-            return state;
-        });
+        html += `
+            <div class="block">
+                <h2>#${q.id} - ${index} / ${total} - ${q.question}</h2>
+                ${img}
+                <ol data-answer="${q.ta}">
+                    <li class="${a}">${q.a}</li>
+                    <li class="${b}">${q.b}</li>
+                    <li class="${c}">${q.c}</li>
+                    <li class="${d}">${q.d}</li>
+                </ol>
+            </div>
+        `;
     });
+
+    html += '</body></html>';
+
+    return html;
 }
+
+// function loadFromLocal () {
+
+//     return fetch('./data/jxedt.json').then(r => r.json()).then((state) => {
+
+//         generateTags(state);
+
+//         state.tagSql = generateTagsSql(tags);
+
+//         return state;
+//     }).then(state => {
+//         let {qids, qidMap} = generateQidMap(state);
+
+//         state.questionIds = qids;
+//         state.qidMap = qidMap;
+
+//         return state;
+//     }).then(state => {
+
+//         return fetch('./data/questions.json').then(r => r.json()).then((questions) => {
+
+//             state.questionSql = generateQuestionSql(questions, state.qidMap, tagMap);
+
+//             return state;
+//         });
+//     });
+// }
 
 // let state = loadFromLocal();
