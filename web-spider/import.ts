@@ -338,12 +338,49 @@ function getQuestionTag (qid, qidMap, tagMap) {
     };
 }
 
+function generateQuestionJSON (questions, qidMap, tagMap) {
+
+    return questions.map((q) => {
+
+        let tag = getQuestionTag(q.id, qidMap, tagMap);
+        let ret = {
+            id: q.id,
+            cate: q.Type,
+            subject: tag.subject,
+            bank: tag.bank,
+            type: tag.type,
+            title: q.question,
+            option1: q.a,
+            option2: q.b,
+            option3: q.c,
+            option4: q.d,
+            anwser: q.ta.split('').map(n => n - 1),
+            media: q.imageurl,
+            tips: q.bestanswer,
+            anwser_img: '',
+            keywords: '',
+            speech_exa: q.bestanswer
+        };
+
+        if (q.Type === '1') { // 判断题
+            if (!q.a) {
+                ret.option1 = '正确';
+            }
+
+            if (!q.b) {
+                ret.option2 = '错误';
+            }
+        }
+
+        return ret;
+    });
+}
+
 function generateQuestionSql (questions, qidMap, tagMap) {
 
     let sql = 'truncate table `dd_question`;\ninsert into `dd_question`'
     + '(`id`,`cate`,`subject`,`bank`,`type`,`title`,`option1`,`option2`,`option3`,`option4`,`anwser`,`media`,`tips`,`anwser_img`,`keywords`,`speech_exa`)'
     + ' values ';
-    let qids = Object.keys(questions).sort((a, b) => a - b);
 
     let values = questions.map((q) => {
 
@@ -395,15 +432,16 @@ function generateQuesitonsDoc (questions) {
     <body>`;
     let total = questions.length;
 
-    questions.forEach((q, index) => {
+    questions.forEach((q, i) => {
 
         let img = '';
+        let index = i + 1;
 
-        if (q.imageurl) {
-            img = `<img src="${q.imageurl}" />`;
+        if (q.media) {
+            img = `<img src="${q.media}" />`;
         }
 
-        let answers = q.ta.split('').map(n => n - 1);
+        let answers = q.anwser;
 
         let a = answers.indexOf(0) !== -1 ? 'active' : '';
         let b = answers.indexOf(1) !== -1 ? 'active' : '';
@@ -412,13 +450,13 @@ function generateQuesitonsDoc (questions) {
 
         html += `
             <div class="block">
-                <h2>#${q.id} - ${index} / ${total} - ${q.question}</h2>
+                <h2>#${q.id} - ${index} / ${total} - ${q.title}</h2>
                 ${img}
-                <ol data-answer="${q.ta}">
-                    <li class="${a}">${q.a}</li>
-                    <li class="${b}">${q.b}</li>
-                    <li class="${c}">${q.c}</li>
-                    <li class="${d}">${q.d}</li>
+                <ol data-answer="${q.anwser}">
+                    <li class="${a}">${q.option1}</li>
+                    <li class="${b}">${q.option2}</li>
+                    <li class="${c}">${q.option3}</li>
+                    <li class="${d}">${q.option4}</li>
                 </ol>
             </div>
         `;

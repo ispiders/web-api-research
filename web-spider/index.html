@@ -73,7 +73,30 @@ Promise.all([
 
         window.questionSql = generateQuestionSql(questions, qidMap, tagMap);
 
-        window.questionDoc = generateQuesitonsDoc(questions);
+        window.questions = generateQuestionJSON(questions, qidMap, tagMap);
+
+        // window.questionDoc = generateQuesitonsDoc(questions);
+
+        window.questionDocs = [];
+
+        tags.forEach((tag) => {
+
+            if (tag.type === 'bank') {
+                window.questionDocs.push({
+                    name: tag.name + '.html',
+                    html: generateQuesitonsDoc(window.questions.filter((q) => {
+
+                        return q.bank.indexOf(tag.id) !== -1;
+                    }))
+                });
+            }
+        });
+
+        let i = 0;
+        window.downloadQuestionDocs = function () {
+            download(window.questionDocs[i].html, window.questionDocs[i].name);
+            i++;
+        };
     });
 });
 </script>
