@@ -1,0 +1,217 @@
+<meta charset="utf-8" />
+<script type="text/javascript" src="dist/import.js"></script>
+<script type="text/javascript">
+
+function unique(arr) {
+    let map = new Map();
+    return arr.reduce((ret, item) => {
+        if (!map.get(item)) {
+            map.set(item, true);
+            ret.push(item);
+        }
+        return ret;
+    }, []);
+}
+function parseJSON(text) {
+    let json;
+    try {
+        json = JSON.parse(text);
+    }
+    catch (e) {
+        json = eval('(' + text + ')');
+    }
+    return json;
+}
+function download(text, name = 'download.txt') {
+    if (typeof text !== 'string') {
+        text = JSON.stringify(text, null, 4);
+    }
+    let file = new File([text], name);
+    let a = document.createElement('a');
+    a.download = name;
+    a.href = URL.createObjectURL(file);
+    a.click();
+}
+
+// $all_qs[$ka]['MeiTiNeiRong'] = '/public/uploads/questions/'.$va['question_img        '];
+// $all_qs[$ka]['tanchuimg']    = '/public/uploads/questions/techniques/'.$va['q        uestion_img2'];
+// $all_qs[$ka]['YuYinJiangJie'] = '/public/uploads/voice/'.$va['question_voice'        ];
+// $all_qs[$ka]['voice_broadcast'] = '/public/uploads/voice_broadcast/'.$va['voi        ce_broadcast'];
+// $all_qs[$ka]['voice'] = '/public/uploads/voice_title/'.$va['voice_title'];
+
+function stripUrl (url) {
+
+    if (url.indexOf('!') !== -1) {
+        url = url.split('!')[0];
+    }
+
+    return url;
+}
+
+function generateFilename (url) {
+    let parts = url.split('/');
+    let filename = parts.pop();
+
+    filename = stripUrl(filename);
+
+    return filename ? '20200823-' + filename : filename;
+}
+
+function getFiles (questions) {
+
+    return questions.map((q) => {
+
+        return {
+            oid: q.id,
+            question_img: [stripUrl(q.thumb), 'questions/' + generateFilename(q.thumb)],
+            question_img2: [stripUrl(q.skill_thumb), 'questions/techniques/' + generateFilename(q.skill_thumb)],
+            question_voice: [q.broadcast_voice, 'voice/' + generateFilename(q.broadcast_voice)],
+            voice_broadcast: [q.skill_voice, 'voice_broadcast/' + generateFilename(q.skill_voice)]
+        };
+    });
+}
+
+let count = 0;
+function logWrongType (type, options, answer) {
+    count++;
+    console.log('wrongtype', count, type, options, answer);
+}
+
+// 原始数据type有问题
+function realQuestionType (type, options, answer) {
+    if (type === 1) {
+        if (options.A.value === '正确' && options.B.value === '错误') {
+            return 1;
+        }
+        else {
+            logWrongType(type, options, answer);
+            if (answer.length === 1) {
+                return 0;
+            }
+            else {
+                return 2;
+            }
+        }
+    }
+    else if (type === 0) {
+        if (options.A.value === '正确' && options.B.value === '错误') {
+            logWrongType(type, options, answer);
+            return 1;
+        }
+        else {
+            if (answer.length === 1) {
+                return 0;
+            }
+            else {
+                logWrongType(type, options, answer);
+                return 2;
+            }
+        }
+    }
+    else if (type === 2) {
+        if (options.A.value === '正确' && options.B.value === '错误') {
+            logWrongType(type, options, answer);
+            return 1;
+        }
+        else {
+            if (answer.length === 1) {
+                logWrongType(type, options, answer);
+                return 0;
+            }
+            else {
+                return 2;
+            }
+        }
+    }
+}
+
+function generateQuestionsSql (questions) {
+
+    const typeMap = {
+        0: 0,
+        1: 2,
+        2: 1
+    };
+
+    let sql = 'insert into `y_mall_questions`'
+    + '(`id`,`oid`,`class1_id`,`class2_id`,`class3_id`,`title`,`question_analysis`,`question_img`,`question_img2`,`question_voice`,`question_voice_content`,`question_type`,`answer_correct`,`voice_broadcast`,`voice_title`)'
+    + ' values ';
+
+    let optionSql = 'insert into `y_mall_options`'
+    + '(`id`, `answer_detail`, `qid`)'
+    + ' values ';
+
+    let qid = 6000;
+    let optionid = 13000;
+    let optionValues = [];
+
+    let values = questions.map((q) => {
+
+        let optionMap = {};
+
+        q.type = realQuestionType(q.type, q.options, q.answer);
+
+        if (q.type !== 1) {
+            ['A','B','C','D'].forEach((key) => {
+                let option = q.options[key];
+
+                if (key in q.options) {
+                    optionMap[key] = optionid++;
+                    optionValues.push('(' + [
+                        optionMap[key],
+                        safeSql(option.value),
+                        qid
+                    ].join(',') + ')');
+                }
+            });
+        }
+        else {
+            optionMap = {
+                'A': 1,
+                'B': 0
+            };
+        }
+
+        return '(' + [
+            qid++,
+            q.id,
+            44,
+            46,
+            516,
+            safeSql(q.title),
+            safeSql(q.explain),
+            safeSql(generateFilename(q.thumb)),
+            safeSql(generateFilename(q.skill_thumb)),
+            safeSql(generateFilename(q.skill_voice)),
+            safeSql(''),
+            typeMap[q.type],
+            safeSql(q.answer.map(key => optionMap[key]).join(',')), // 单独的option表, 判断题 0 错 1 对
+            safeSql(generateFilename(q.broadcast_voice)),
+            safeSql('')
+        ].join(',') + ')';
+    });
+
+    return {
+        questions: sql + values.join(',\n') + ';',
+        options: optionSql + optionValues.join(',\n') + ';'
+    };
+}
+
+fetch('../../data/new-questions.json').then(r => r.json())
+.then((json) => {
+
+    return json.data;
+}).then((questions) => {
+
+    window.sql = generateQuestionsSql(questions);
+    window.files = getFiles(questions);
+});
+
+let s = [];
+for (let i = 6000; i < 6305; i++) {
+    s.push(i);
+}
+
+console.log(s.join(','))
+
+</script>
