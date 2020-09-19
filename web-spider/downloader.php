@@ -4,7 +4,7 @@ $jsonfile = $argv[1];
 
 function download($url, $name, $path, $retryCount = 1, $maxCount = 1) {
 
-    $filename = './' . $path . '/' . $name;
+    $filename = $path . '/' . $name;
 
     if (file_exists($filename)) {
         return $filename;
@@ -21,15 +21,16 @@ function download($url, $name, $path, $retryCount = 1, $maxCount = 1) {
 
         if ($retryCount >= $maxCount) {
             echo "failed $retryCount times to download $url, abort\n";
+
+            $f = fopen($path . '/failed-downloads.log', 'a+');
+            fwrite($f, "$url\n");
+            fclose($f);
+
             return false;
         }
 
         echo "fail to download $url \n";
         echo "$retryCount times, sleep 500ms then retry\n";
-
-        $f = fopen('./failed-downloads.log', 'a+');
-        fwrite($f, "$url\n");
-        fclose($f);
 
         usleep(500000);
 
@@ -44,16 +45,18 @@ function download($url, $name, $path, $retryCount = 1, $maxCount = 1) {
 
 if (file_exists($jsonfile)) {
     $files = json_decode(file_get_contents($jsonfile), true);
+    $dir = dirname($jsonfile);
+
+    mkdir($dir . '/download');
 
     foreach ($files as $file) {
-        foreach ($file as $key => $arr) {
-            if (!empty($arr[0])) {
-                download($arr[0], $arr[1], 'download');
-            }
-        }
+
+        download($file, basename($file), $dir . '/download');
     }
 }
 else {
     echo 'json file not found';
     exit;
 }
+
+// nohup php download.php files.json &

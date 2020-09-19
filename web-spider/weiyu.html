@@ -1,0 +1,341 @@
+<meta charset="utf-8" />
+<script type="text/javascript">
+function safeSql (str) {
+
+    str = String(str);
+
+    return "'" + str.replace(/[\'\\]/g, (match) => '\\' + match[0]) + "'";
+}
+function unique(arr) {
+    let map = new Map();
+    return arr.reduce((ret, item) => {
+        if (!map.get(item)) {
+            map.set(item, true);
+            ret.push(item);
+        }
+        return ret;
+    }, []);
+}
+function parseJSON(text) {
+    let json;
+    try {
+        json = JSON.parse(text);
+    }
+    catch (e) {
+        json = eval('(' + text + ')');
+    }
+    return json;
+}
+function download(text, name = 'download.txt') {
+    if (typeof text !== 'string') {
+        text = JSON.stringify(text, null, 4);
+    }
+    let file = new File([text], name);
+    let a = document.createElement('a');
+    a.download = name;
+    a.href = URL.createObjectURL(file);
+    a.click();
+}
+
+function getQuestionsKm (cates) {
+
+    let map = {};
+    let count = 0;
+
+    cates.forEach((cate) => {
+        let km = cate.km;
+
+        cate.qids.forEach((qid) => {
+
+            if (!map[qid]) {
+                map[qid] = km;
+            }
+            else if (map[qid] !== km) {
+                console.error('qid exists in both', qid, km, map[qid]);
+            }
+
+            count++;
+        });
+    });
+
+    console.log(count);
+
+    return map;
+}
+
+function getFiles (questions) {
+
+    return questions.reduce((arr, q) => {
+
+        if (q.tuUrl) {
+            arr.push(q.tuUrl);
+            arr.push(q.dongtuUrl);
+        }
+
+        if (q.shenyinUrl) {
+            arr.push(q.shenyinUrl);
+        }
+
+        return arr;
+    }, []);
+}
+
+function parseQuestion(item, km) {
+
+    var question = {
+        id: item.id,
+        km: km,
+        tixing: item.tixing,
+        title: item.name,
+        options: [],
+        tu: item.tu,
+        tuUrl: '',
+        dongtu: item.tu ? item.tu.replace(/\.(jpg|png)$/i, '.gif') : '',
+        dongtuUrl: '',
+        shenyin: item.shenyin,
+        shenyinUrl: item.shenyin ? 'http://kljk.duixun.cn/Audio/wei/' + item.shenyin : '',
+        answer: item.answer,
+        keys: item.keys
+    };
+
+    var tixing = parseInt(item.tixing); // 1 判断题
+    var subject = item.name;
+
+    subject = subject.replace("A：", "A:");
+    subject = subject.replace("B：", "B:");
+    subject = subject.replace("C：", "C:");
+    subject = subject.replace("D：", "D:");
+    subject = subject.replace("A.", "A:");
+    subject = subject.replace("B.", "B:");
+    subject = subject.replace("C.", "C:");
+    subject = subject.replace("D.", "D:");
+
+    if (tixing !== 1) {
+        subject = subject.replace("ABS", "<100001>");
+
+        var vA = subject.indexOf("A");
+        var vB = subject.indexOf("B");
+        var vC = subject.indexOf("C");
+        var vD = subject.indexOf("D");
+
+        if (vA !== -1) {
+            var txtTit = subject.substring(0, vA);
+
+            txtTit = txtTit.replace("<100001>", "ABS");
+
+            var txtA = subject.substring(vA + 2, vB)
+            var txtB = subject.substring(vB + 2, vC)
+            var txtC = subject.substring(vC + 2, vD)
+            var txtD = subject.substring(vD + 2, subject.length)
+
+            question.title = txtTit;
+            question.options = [txtA, txtB, txtC, txtD];
+        }
+    }
+
+    if (km == "1") {
+        var tuPath = "http://kljk.duixun.cn/image/original/";
+    }
+    else {
+        var tuPath = "http://kljk.cdysd.com/image/original/";
+    }
+
+    question.tuUrl = question.tu ? tuPath + question.tu : '';
+    question.dongtuUrl = question.dongtu ? 'http://kljk.cdysd.com/image/original/keys/' + question.dongtu : '';
+
+    return question;
+}
+
+function generateFilename (name, type) {
+
+    return name;
+}
+
+function main (cates, questions) {
+
+    let questionMap = questions.reduce((map, q) => {
+
+        map[q.id] = q;
+        return map;
+    }, {});
+
+    let cateidMap = {
+        'km-1': 44,
+        'km-1-car-1': 46,
+        'km-1-car-2': 47,
+        'km-1-car-3': 48,
+        'km-1-car-4': 49,
+        'km-4': 45,
+        'km-4-car-1': 50,
+        'km-4-car-2': 51,
+        'km-4-car-3': 52,
+        'km-4-car-4': 53
+    };
+
+    let ucid = 100;
+    let uqid = 1;
+    let uoid = 1;
+    let cateMap = {};
+    let categories = [];
+    let questionValues = [];
+    let optionValues = [];
+    let kmNameMap = {
+        1: '科目一',
+        2: '科目二',
+        3: '科目三',
+        4: '科目四'
+    };
+    let carNameMap = {
+        1: '小车',
+        2: '货车',
+        3: '客车',
+        4: '摩托车'
+    };
+    let typeMap = {
+        1: 2,
+        2: 0,
+        3: 1
+    };
+
+    function realQuestionType (tixing) {
+
+        return typeMap[tixing];
+    }
+
+    let optionSql = 'truncate table `y_mall_options`; \ninsert into `y_mall_options`'
+    + '(`id`, `answer_detail`, `qid`)'
+    + ' values \n';
+
+    let questionSql = 'truncate table `y_mall_questions`; \ninsert into `y_mall_questions`'
+    + '(`id`,`oid`,`class1_id`,`class2_id`,`class3_id`,`title`,`question_analysis`,`question_img`,`question_img2`,`question_voice`,`question_voice_content`,`question_type`,`answer_correct`)'
+    + ' values ';
+
+    cates.forEach((cate) => {
+
+        let km = 'km-' + cate.km;
+        let car = km + '-car-' + cate.car;
+        let kmCate = cateMap[km];
+        let carCate = cateMap[car];
+
+        if (!kmCate) {
+            kmCate = cateMap[km] = {
+                id: cateidMap[km],
+                pid: 0,
+                name: kmNameMap[cate.km],
+                floor: 0
+            };
+            categories.push(kmCate);
+        }
+
+        if (!carCate) {
+            carCate = cateMap[car] = {
+                id: cateidMap[car],
+                pid: kmCate.id,
+                name: carNameMap[cate.car],
+                floor: 1
+            };
+            categories.push(carCate);
+        }
+
+        let category = {
+            id: ucid++,
+            pid: carCate.id,
+            name: cate.name,
+            floor: 2
+        };
+
+        categories.push(category);
+
+        cate.qids.forEach((qid) => {
+
+            let q = questionMap[qid];
+
+            if (!q) {
+                return;
+            }
+
+            q.type = realQuestionType(q.tixing, q.options, q.answer);
+
+            let optionMap = {};
+
+            if (q.type !== 2) {
+                q.options.forEach((option, index) => {
+                    optionMap[index + 1] = uoid++;
+                    optionValues.push('(' + [
+                        optionMap[index + 1],
+                        safeSql(option),
+                        uqid
+                    ].join(',') + ')');
+                });
+            }
+            else {
+                optionMap = {
+                    '1': 1,
+                    '2': 0
+                };
+            }
+
+            questionValues.push('(' + [
+                uqid++,
+                qid,
+                kmCate.id,
+                carCate.id,
+                category.id,
+                safeSql(q.title),
+                safeSql(''),
+                safeSql(generateFilename(q.tu)),
+                safeSql(generateFilename(q.dongtu)),
+                safeSql(generateFilename(q.shenyin)),
+                safeSql(''),
+                q.type,
+                safeSql(q.answer.split('').map(key => optionMap[key]).join(',')) // 单独的option表, 判断题 0 错 1 对
+            ].join(',') + ')');
+        });
+    });
+
+    return {
+        categorySql: generateCategorySql(categories),
+        optionSql: optionSql + optionValues.join(',\n') + ';',
+        questionSql: questionSql + questionValues.join(',\n') + ';'
+    };
+}
+
+function generateCategorySql (cates) {
+
+    let sql = 'truncate table `y_mall_classification`; \ninsert into `y_mall_classification`'
+    + '(`id`,`pid`,`name`,`floor`)'
+    + ' values \n';
+
+    let values = cates.map((cate) => {
+        return '(' + [
+            cate.id,
+            cate.pid,
+            safeSql(cate.name),
+            cate.floor
+        ].join(',') + ')';
+    });
+
+    return sql + values.join(',\n') + ';'
+}
+
+Promise.all([
+    fetch('../../data/questions-weiyu.json').then(r => r.json()),
+    fetch('../../data/categories-weiyu.json').then(r => r.json())
+])
+.then(([questions, cates]) => {
+
+    let kmMap = getQuestionsKm(cates);
+
+    window.questions = questions.map((q) => {
+
+        return parseQuestion(q, kmMap[q.id]);
+    });
+
+    window.files = getFiles(window.questions);
+
+    console.log('done');
+
+    window.result = main(cates, window.questions);
+});
+
+</script>

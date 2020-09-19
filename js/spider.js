@@ -1,4 +1,3 @@
-"use strict";
 function progress(done, left) {
     let currentTime = Date.now();
     if (!progress.startTime) {
@@ -14,6 +13,9 @@ function progress(done, left) {
 }
 function readURL(url, encoding = 'utf-8') {
     return fetch(url).then((response) => {
+        if (response.status !== 200) {
+            throw response.statusText;
+        }
         return response.blob().then((blob) => {
             return readBlobText(blob, encoding);
         });
@@ -88,6 +90,10 @@ class Spider {
                         this.run();
                     }, this.interval);
                 }
+            }, () => {
+                setTimeout(() => {
+                    this.run();
+                }, this.interval * 10);
             });
         }
     }
@@ -144,7 +150,7 @@ function getEncoding() {
         let metaElements = document.querySelectorAll('meta');
         for (let i = 0; i < metaElements.length; i++) {
             let el = metaElements[i];
-            let equiv = el.getAttribute('http-equiv');
+            let equiv = el.getAttribute('http-equiv') || el.getAttribute('https-equiv');
             equiv = equiv ? equiv.toLowerCase() : '';
             if (equiv === 'content-type') {
                 contentType = el.getAttribute('content') || '';

@@ -26,6 +26,10 @@ function readURL (url: string, encoding: string = 'utf-8'): Promise<string> {
 
     return fetch(url).then((response) => {
 
+        if (response.status !== 200) {
+            throw response.statusText;
+        }
+
         return response.blob().then((blob) => {
 
             return readBlobText(blob, encoding);
@@ -151,6 +155,11 @@ class Spider {
                         this.run();
                     }, this.interval);
                 }
+            }, () => {
+
+                setTimeout(() => {
+                    this.run();
+                }, this.interval * 10);
             });
         }
     }
@@ -231,7 +240,7 @@ function getEncoding () {
 
         for (let i = 0; i < metaElements.length; i++) {
             let el = metaElements[i];
-            let equiv = el.getAttribute('http-equiv');
+            let equiv = el.getAttribute('http-equiv') || el.getAttribute('https-equiv');
 
             equiv = equiv ? equiv.toLowerCase() : '';
 

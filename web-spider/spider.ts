@@ -1,3 +1,26 @@
+function diff (arr1, arr2) {
+
+    let map = arr1.reduce((m, item) => {
+
+        if (!m.has(item)) {
+            m.set(item, 1);
+        }
+
+        return m;
+    }, new Map());
+
+    let diffArr = [];
+
+    arr2.forEach((item) => {
+
+        if (!map.has(item)) {
+            diffArr.push(item);
+        }
+    });
+
+    return diffArr;
+}
+
 function unique<T> (arr: T[]): T[] {
 
     let map = new Map();
