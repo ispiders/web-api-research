@@ -100,6 +100,12 @@ class Spider {
         this.state = [];
     }
 
+    saveState () {
+
+        localStorage.setItem('spider-state', JSON.stringify(this.state));
+        localStorage.setItem('spider-finished', String(this.finished));
+    }
+
     addTask (task: Task): void {
 
         this.tasks.push(task);
@@ -317,7 +323,16 @@ function analyseMenu (boundary: number = 100) {
     return ret;
 }
 
-function analyseContent (doc: HTMLDocument): string {
+function analyseContent (doc: HTMLDocument, boundary: number = 1000): string {
+
+    let excludeElements = doc.body.querySelectorAll('script,style,textarea');
+
+    for (let i = 0; i < excludeElements.length; i++) {
+
+        let el = excludeElements[i];
+
+        el.parentElement.removeChild(el);
+    }
 
     let boundary = 1000;
     let els = doc.body.querySelectorAll<HTMLElement>('*');
@@ -326,6 +341,11 @@ function analyseContent (doc: HTMLDocument): string {
 
     for (let i = 0; i < els.length; i++) {
         let el = els[i];
+
+        if (['script', 'style', 'textarea'].indexOf(el.nodeName.toLowerCase()) !== -1) {
+            continue;
+        }
+
         let text = el.innerText;
 
         if (text.length > boundary && (!tmp || text.length < tmp)) {
