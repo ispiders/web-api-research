@@ -63,9 +63,9 @@ function download (text: string | object, name: string = 'download.txt') {
     a.click();
 }
 
-function readURL (url: string, encoding: string = 'utf-8'): Promise<string> {
+function readURL (url: string, options: RequestInit = {}, encoding: string = 'utf-8'): Promise<string> {
 
-    return fetch(url).then((response) => {
+    return fetch(url, options).then((response) => {
 
         return response.blob().then((blob) => {
 
@@ -129,27 +129,32 @@ function setBaseUrl (doc: HTMLDocument, baseUrl: string, force: boolean = false)
 }
 
 interface TMatchFunction {
-    (url: string): boolean;
+    (url: Task): boolean;
 }
 
 interface TextRule {
     match: RegExp | TMatchFunction;
     dataType: 'text';
-    parse: (spider: Spider, doc: string, task: string) => void;
+    parse: (spider: Spider, doc: string, task: Task) => void;
 }
 
 interface HTMLRule {
     match: RegExp | TMatchFunction;
     dataType?: 'html';
-    parse: (spider: Spider, doc: HTMLDocument, task: string) => void;
+    parse: (spider: Spider, doc: HTMLDocument, task: Task) => void;
 }
 
 type Rule = TextRule | HTMLRule;
+type Task = {
+    url: string;
+    options: RequestInit;
+    data?: any;
+};
 
 class Spider {
 
     rules: Rule[];
-    tasks: string[];
+    tasks: Task[];
     state: object;
     index: number = 0;
     interval: number = 500;
@@ -163,17 +168,29 @@ class Spider {
         this.preventUnload();
     }
 
+    reset () {
+        this.rules = [];
+        this.tasks = [];
+        this.state = {};
+        this.index = 0;
+        this.paused = false;
+    }
+
     preventUnload () {
 
         window.onbeforeunload = () => true;
     }
 
-    addTask (task: string): void {
+    addTask (url: string, options: RequestInit = {}, data?: any): void {
 
-        this.tasks.push(task);
+        this.tasks.push({
+            url: url,
+            options: options,
+            data: data
+        });
     }
 
-    currentTask (): string | undefined {
+    currentTask (): Task | undefined {
 
         return this.tasks[this.index];
     }
@@ -192,21 +209,21 @@ class Spider {
         return false;
     }
 
-    getText (url: string, encoding: string = 'utf-8'): Promise<string> {
+    getText (task: Task, encoding: string = 'utf-8'): Promise<string> {
 
-        return readURL(url, encoding);
+        return readURL(task.url, task.options, encoding);
     }
 
-    getJSON (url: string, encoding: string = 'utf-8'): Promise<any> {
+    getJSON (task: Task, encoding: string = 'utf-8'): Promise<any> {
 
-        return readURL(url, encoding).then((text) => {
+        return readURL(task.url, task.options, encoding).then((text) => {
 
             return parseJSON(text);
         });
     }
 
-    getDocument (url: string, encoding: string = 'utf-8'): Promise<HTMLDocument> {
-        return readURL(url, encoding)
+    getDocument (task: Task, encoding: string = 'utf-8'): Promise<HTMLDocument> {
+        return readURL(task.url, task.options, encoding)
             .then((text) => {
                 return parseHTML(text);
             });
@@ -221,11 +238,11 @@ class Spider {
         this.rules.push(rule);
     }
 
-    parse (text: string, task: string) {
+    parse (text: string, task: Task) {
 
         this.rules.forEach((rule) => {
 
-            if (rule.match instanceof RegExp && rule.match.test(task)
+            if (rule.match instanceof RegExp && rule.match.test(task.url)
                     || typeof rule.match === 'function' && rule.match(task)) {
 
                 if (rule.parse) {

@@ -1,0 +1,194 @@
+<meta charset="utf-8" />
+<script type="text/javascript">
+function safeSql (str) {
+
+    str = String(str);
+
+    return "'" + str.replace(/[\'\\]/g, (match) => '\\' + match[0]) + "'";
+}
+function unique(arr) {
+    let map = new Map();
+    return arr.reduce((ret, item) => {
+        if (!map.get(item)) {
+            map.set(item, true);
+            ret.push(item);
+        }
+        return ret;
+    }, []);
+}
+function parseJSON(text) {
+    let json;
+    try {
+        json = JSON.parse(text);
+    }
+    catch (e) {
+        json = eval('(' + text + ')');
+    }
+    return json;
+}
+function download(text, name = 'download.txt') {
+    if (typeof text !== 'string') {
+        text = JSON.stringify(text, null, 4);
+    }
+    let file = new File([text], name);
+    let a = document.createElement('a');
+    a.download = name;
+    a.href = URL.createObjectURL(file);
+    a.click();
+}
+
+function generateFilename (name, type) {
+
+    return name;
+}
+
+function main (questionMap) {
+
+    let cateidMap = {
+        'km-1': 57,
+        'km-1-car-1': 59,
+        // 'km-1-car-2': 47,
+        // 'km-1-car-3': 48,
+        // 'km-1-car-4': 49,
+        'km-4': 58,
+        'km-4-car-1': 64,
+        // 'km-4-car-2': 51,
+        // 'km-4-car-3': 52,
+        // 'km-4-car-4': 53
+    };
+
+    let ucid = 100;
+    let uqid = 20000;
+    let uoid = 40000;
+    let cateMap = {};
+    let categories = [];
+    let questionValues = [];
+    let optionValues = [];
+    let kmNameMap = {
+        1: '科目一',
+        2: '科目二',
+        3: '科目三',
+        4: '科目四'
+    };
+    let carNameMap = {
+        1: '小车',
+        2: '货车',
+        3: '客车',
+        4: '摩托车'
+    };
+    // let typeMap = {
+    //     1: 2,
+    //     2: 0,
+    //     3: 1
+    // };
+
+    let tixingMap = {
+        '[تاق تاللاش]': 0, // 单选题
+        '[ھۆكۈم قىلىش]': 2 // 判断题
+        // 1 多选
+    };
+
+    function realQuestionType (tixing) {
+
+        return tixingMap[tixing];
+    }
+
+    // truncate table `y_mall_options`; \n
+    let optionSql = 'insert into `y_mall_options`'
+    + '(`id`, `answer_detail`, `qid`)'
+    + ' values \n';
+
+    // truncate table `y_mall_questions`; \n
+    let questionSql = 'insert into `y_mall_questions`'
+    + '(`id`,`oid`,`class1_id`,`class2_id`,`class3_id`,`title`,`question_analysis`,`question_img`,`question_img2`,`question_voice`,`question_voice_content`,`question_type`,`answer_correct`)'
+    + ' values ';
+
+    Object.keys(questionMap).forEach((qid) => {
+
+        let q = questionMap[qid];
+
+        if (!q) {
+            return;
+        }
+
+        let title = q.title.trim();
+        title = title.replace(/^\d+\.\s*/, '');
+
+        let match = title.match(/^(.*?)\s*(\[تاق تاللاش\]|\[ھۆكۈم قىلىش\])?$/);
+
+        title = match[1];
+
+        if (match[2]) {
+            q.type = realQuestionType(match[2]);
+        }
+        else {
+            q.type = 1;
+        }
+
+        let optionMap = {};
+
+        if (q.type !== 2) {
+            q.options.forEach((option, index) => {
+                optionMap[option.answer] = uoid++;
+                optionValues.push('(' + [
+                    optionMap[option.answer],
+                    safeSql(option.text),
+                    uqid
+                ].join(',') + ')');
+            });
+        }
+        else {
+            optionMap = {
+                '1': 1,
+                '0': 0
+            };
+        }
+
+        let answer = q.answer.data_answer;
+
+        answer = optionMap[answer];
+
+        let tmpcontent = '';
+
+        if (q.answer.data_answer === null) {
+            tmpcontent = '暂无答案';
+        }
+        else if (typeof answer === 'undefined') {
+            tmpcontent = '暂无答案';
+            console.error('answer', q.answer, q.options, q.type);
+        }
+
+        let class1 = 'km-' + q.course;
+        let class2 = class1 + '-car-1';
+        questionValues.push('(' + [
+            uqid++,
+            qid,
+            cateidMap[class1],
+            cateidMap[class2],
+            q.course === 1 ? 147 : 148,
+            safeSql(title),
+            safeSql(''),
+            safeSql(generateFilename(q.pic)),
+            safeSql(generateFilename(q.pic1)),
+            safeSql(generateFilename(q.audio)),
+            safeSql(tmpcontent),
+            q.type,
+            safeSql(answer) // 单独的option表, 判断题 0 错 1 对
+        ].join(',') + ')');
+    });
+
+    return {
+        optionSql: optionSql + optionValues.join(',\n') + ';',
+        questionSql: questionSql + questionValues.join(',\n') + ';'
+    };
+}
+
+Promise.all([
+    fetch('../../data/questions-xiaojing520.json').then(r => r.json())
+])
+.then((questions) => {
+    console.log(questions);
+    window.result = main(questions[0]);
+});
+
+</script>
