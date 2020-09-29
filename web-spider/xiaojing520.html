@@ -132,7 +132,7 @@ function main (questionMap) {
                 optionMap[option.answer] = uoid++;
                 optionValues.push('(' + [
                     optionMap[option.answer],
-                    safeSql(option.text),
+                    safeSql(option.text.replace(/^[ABCD]:\s*/, '')),
                     uqid
                 ].join(',') + ')');
             });
