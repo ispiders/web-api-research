@@ -9,7 +9,7 @@ function diff (arr1, arr2) {
         return m;
     }, new Map());
 
-    let diffArr = [];
+    let diffArr: any[] = [];
 
     arr2.forEach((item) => {
 
@@ -63,18 +63,39 @@ function download (text: string | object, name: string = 'download.txt') {
     a.click();
 }
 
-function readURL (url: string, options: RequestInit = {}, encoding: string = 'utf-8'): Promise<string> {
+function readURL (url: string, options: RequestInit = {}): Promise<Blob> {
 
     return fetch(url, options).then((response) => {
 
-        return response.blob().then((blob) => {
-
-            return readBlobText(blob, encoding);
-        });
+        return response.blob();
     });
 }
 
-function readBlobText (blob: Blob, encoding: string): Promise<string> {
+function getText (url: string, options: RequestInit = {}, encoding: string = 'utf-8'): Promise<string> {
+
+    return readURL(url, options).then((blob) => {
+
+        return readBlobText(blob, encoding);
+    });
+}
+
+function getJSON (url: string, options: RequestInit = {}, encoding: string = 'utf-8'): Promise<any> {
+
+    return getText(url, options, encoding).then((text) => {
+
+        return parseJSON(text);
+    });
+}
+
+function getDocument (url: string, options: RequestInit = {}, encoding: string = 'utf-8'): Promise<HTMLDocument> {
+
+    return readURL(url, options).then((blob) => {
+
+        return readBlobDocument(blob, encoding);
+    });
+}
+
+function readBlobText (blob: Blob, encoding: string = 'utf-8'): Promise<string> {
 
     let fr = new FileReader;
 
@@ -90,6 +111,61 @@ function readBlobText (blob: Blob, encoding: string): Promise<string> {
 
         fr.readAsText(blob, encoding);
     });
+}
+
+function readBlobDocument (blob: Blob, encoding: string = 'utf-8'): Promise<HTMLDocument> {
+
+    return readBlobText(blob, encoding).then((text) => {
+
+        let doc = parseHTML(text);
+        let charset = getEncoding(doc);
+
+        if (encoding && charset !== encoding || !encoding && charset !== 'utf-8') {
+
+            return readBlobText(blob, charset).then((text) => {
+                return parseHTML(text);
+            });
+        }
+        else {
+            return doc;
+        }
+    });
+}
+
+function getEncoding (doc: HTMLDocument) {
+
+    let charsetMeta = doc.querySelector('meta[charset]');
+    let charset = 'utf-8';
+
+    if (charsetMeta) {
+        charset = charsetMeta.getAttribute('charset') || charset;
+    }
+    else {
+        let contentType = '';
+        let metaElements = doc.querySelectorAll('meta');
+
+        for (let i = 0; i < metaElements.length; i++) {
+            let el = metaElements[i];
+            let equiv = el.getAttribute('http-equiv') || el.getAttribute('https-equiv');
+
+            equiv = equiv ? equiv.toLowerCase() : '';
+
+            if (equiv === 'content-type') {
+                contentType = el.getAttribute('content') || '';
+                break;
+            }
+        }
+
+        if (contentType) {
+            let matches = contentType.match(/charset=(\S*)/);
+
+            if (matches && matches[1]) {
+                charset = matches[1];
+            }
+        }
+    }
+
+    return charset.toLowerCase();
 }
 
 function parseHTML (text: string): HTMLDocument {
@@ -135,23 +211,24 @@ interface TMatchFunction {
 interface TextRule {
     match: RegExp | TMatchFunction;
     dataType: 'text';
-    parse: (spider: Spider, doc: string, task: Task) => void;
+    parse: (spider: Spider<any>, doc: string, task: Task) => void;
 }
 
 interface HTMLRule {
     match: RegExp | TMatchFunction;
     dataType?: 'html';
-    parse: (spider: Spider, doc: HTMLDocument, task: Task) => void;
+    parse: (spider: Spider<any>, doc: HTMLDocument, task: Task) => void;
 }
 
 type Rule = TextRule | HTMLRule;
 type Task = {
     url: string;
     options: RequestInit;
+    encoding?: string;
     data?: any;
 };
 
-class Spider<S = any> {
+class Spider<S extends {}> {
 
     rules: Rule[];
     tasks: Task[];
@@ -181,12 +258,13 @@ class Spider<S = any> {
         window.onbeforeunload = () => true;
     }
 
-    addTask (url: string, options: RequestInit = {}, data?: any): void {
+    addTask (url: string, options: RequestInit = {}, data?: any, encoding?: string): void {
 
         this.tasks.push({
             url: url,
             options: options,
-            data: data
+            data: data,
+            encoding: encoding
         });
     }
 
@@ -209,26 +287,6 @@ class Spider<S = any> {
         return false;
     }
 
-    getText (task: Task, encoding: string = 'utf-8'): Promise<string> {
-
-        return readURL(task.url, task.options, encoding);
-    }
-
-    getJSON (task: Task, encoding: string = 'utf-8'): Promise<any> {
-
-        return readURL(task.url, task.options, encoding).then((text) => {
-
-            return parseJSON(text);
-        });
-    }
-
-    getDocument (task: Task, encoding: string = 'utf-8'): Promise<HTMLDocument> {
-        return readURL(task.url, task.options, encoding)
-            .then((text) => {
-                return parseHTML(text);
-            });
-    }
-
     pause () {
         this.paused = true;
     }
@@ -238,7 +296,7 @@ class Spider<S = any> {
         this.rules.push(rule);
     }
 
-    parse (text: string, task: Task) {
+    parse (blob: Blob, task: Task) {
 
         this.rules.forEach((rule) => {
 
@@ -248,10 +306,14 @@ class Spider<S = any> {
                 if (rule.parse) {
 
                     if (rule.dataType === 'text') {
-                        rule.parse(this, text, task);
+                        readBlobText(blob, task.encoding).then((text) => {
+                            rule.parse(this, text, task);
+                        });
                     }
                     else {
-                        rule.parse(this, parseHTML(text), task);
+                        readBlobDocument(blob, task.encoding).then((doc) => {
+                            rule.parse(this, doc, task);
+                        });
                     }
                 }
             }
@@ -268,9 +330,9 @@ class Spider<S = any> {
 
         if (task) {
 
-            this.getText(task).then((text) => {
+            readURL(task.url, task.options).then((blob) => {
 
-                this.parse(text, task);
+                this.parse(blob, task);
             }, (err) => {
                 setTimeout(() => {
                     this.run();

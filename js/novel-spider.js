@@ -43,14 +43,27 @@ function download(text, name = 'download.txt') {
     a.href = URL.createObjectURL(file);
     a.click();
 }
-function readURL(url, options = {}, encoding = 'utf-8') {
+function readURL(url, options = {}) {
     return fetch(url, options).then((response) => {
-        return response.blob().then((blob) => {
-            return readBlobText(blob, encoding);
-        });
+        return response.blob();
     });
 }
-function readBlobText(blob, encoding) {
+function getText(url, options = {}, encoding = 'utf-8') {
+    return readURL(url, options).then((blob) => {
+        return readBlobText(blob, encoding);
+    });
+}
+function getJSON(url, options = {}, encoding = 'utf-8') {
+    return getText(url, options, encoding).then((text) => {
+        return parseJSON(text);
+    });
+}
+function getDocument(url, options = {}, encoding = 'utf-8') {
+    return readURL(url, options).then((blob) => {
+        return readBlobDocument(blob, encoding);
+    });
+}
+function readBlobText(blob, encoding = 'utf-8') {
     let fr = new FileReader;
     return new Promise((resolve, reject) => {
         fr.onload = function () {
@@ -61,6 +74,47 @@ function readBlobText(blob, encoding) {
         };
         fr.readAsText(blob, encoding);
     });
+}
+function readBlobDocument(blob, encoding = 'utf-8') {
+    return readBlobText(blob, encoding).then((text) => {
+        let doc = parseHTML(text);
+        let charset = getEncoding(doc);
+        if (encoding && charset !== encoding || !encoding && charset !== 'utf-8') {
+            return readBlobText(blob, charset).then((text) => {
+                return parseHTML(text);
+            });
+        }
+        else {
+            return doc;
+        }
+    });
+}
+function getEncoding(doc) {
+    let charsetMeta = doc.querySelector('meta[charset]');
+    let charset = 'utf-8';
+    if (charsetMeta) {
+        charset = charsetMeta.getAttribute('charset') || charset;
+    }
+    else {
+        let contentType = '';
+        let metaElements = doc.querySelectorAll('meta');
+        for (let i = 0; i < metaElements.length; i++) {
+            let el = metaElements[i];
+            let equiv = el.getAttribute('http-equiv') || el.getAttribute('https-equiv');
+            equiv = equiv ? equiv.toLowerCase() : '';
+            if (equiv === 'content-type') {
+                contentType = el.getAttribute('content') || '';
+                break;
+            }
+        }
+        if (contentType) {
+            let matches = contentType.match(/charset=(\S*)/);
+            if (matches && matches[1]) {
+                charset = matches[1];
+            }
+        }
+    }
+    return charset.toLowerCase();
 }
 function parseHTML(text) {
     let parser = new DOMParser;
@@ -107,11 +161,12 @@ class Spider {
     preventUnload() {
         window.onbeforeunload = () => true;
     }
-    addTask(url, options = {}, data) {
+    addTask(url, options = {}, data, encoding) {
         this.tasks.push({
             url: url,
             options: options,
-            data: data
+            data: data,
+            encoding: encoding
         });
     }
     currentTask() {
@@ -125,36 +180,26 @@ class Spider {
         }
         return false;
     }
-    getText(task, encoding = 'utf-8') {
-        return readURL(task.url, task.options, encoding);
-    }
-    getJSON(task, encoding = 'utf-8') {
-        return readURL(task.url, task.options, encoding).then((text) => {
-            return parseJSON(text);
-        });
-    }
-    getDocument(task, encoding = 'utf-8') {
-        return readURL(task.url, task.options, encoding)
-            .then((text) => {
-            return parseHTML(text);
-        });
-    }
     pause() {
         this.paused = true;
     }
     addRule(rule) {
         this.rules.push(rule);
     }
-    parse(text, task) {
+    parse(blob, task) {
         this.rules.forEach((rule) => {
             if (rule.match instanceof RegExp && rule.match.test(task.url)
                 || typeof rule.match === 'function' && rule.match(task)) {
                 if (rule.parse) {
                     if (rule.dataType === 'text') {
-                        rule.parse(this, text, task);
+                        readBlobText(blob, task.encoding).then((text) => {
+                            rule.parse(this, text, task);
+                        });
                     }
                     else {
-                        rule.parse(this, parseHTML(text), task);
+                        readBlobDocument(blob, task.encoding).then((doc) => {
+                            rule.parse(this, doc, task);
+                        });
                     }
                 }
             }
@@ -166,8 +211,8 @@ class Spider {
             this.paused = false;
         }
         if (task) {
-            this.getText(task).then((text) => {
-                this.parse(text, task);
+            readURL(task.url, task.options).then((blob) => {
+                this.parse(blob, task);
             }, (err) => {
                 setTimeout(() => {
                     this.run();
@@ -223,40 +268,13 @@ function parseMenu(menuSelector, spider, doc) {
     }
     return elems;
 }
-function getEncoding() {
-    let charsetMeta = document.querySelector('meta[charset]');
-    let charset = 'utf-8';
-    if (charsetMeta) {
-        charset = charsetMeta.getAttribute('charset') || charset;
-    }
-    else {
-        let contentType = '';
-        let metaElements = document.querySelectorAll('meta');
-        for (let i = 0; i < metaElements.length; i++) {
-            let el = metaElements[i];
-            let equiv = el.getAttribute('http-equiv') || el.getAttribute('https-equiv');
-            equiv = equiv ? equiv.toLowerCase() : '';
-            if (equiv === 'content-type') {
-                contentType = el.getAttribute('content') || '';
-                break;
-            }
-        }
-        if (contentType) {
-            let matches = contentType.match(/charset=(\S*)/);
-            if (matches && matches[1]) {
-                charset = matches[1];
-            }
-        }
-    }
-    return charset.toLowerCase();
-}
-function analyseMenu(boundary = 100) {
-    let links = document.querySelectorAll('a[href]');
+function analyseMenu(doc, boundary = 100) {
+    let links = doc.querySelectorAll('a[href]');
     let elementsMap = new WeakMap();
     let elements = [];
     for (let i = 0; i < links.length; i++) {
         let el = links[i].parentElement;
-        while (el && el.parentElement !== document.body) {
+        while (el && el.parentElement !== doc.body) {
             let count = elementsMap.get(el);
             if (count) {
                 elementsMap.set(el, count + 1);
@@ -317,7 +335,8 @@ function analyseContent(doc, boundary = 1000) {
     return container;
 }
 function main(spider) {
-    let menu = analyseMenu();
+    let encoding = getEncoding(document);
+    let menu = analyseMenu(document);
     if (!menu) {
         console.error('menu element not found');
         return;
@@ -326,13 +345,14 @@ function main(spider) {
     for (let i = 0; i < links.length; ++i) {
         let item = links[i];
         spider.addTask(item.href, {}, {
+            encoding: encoding,
             title: item.innerText,
             isChapter: true
-        });
+        }, encoding);
     }
 }
 //
-spider = new Spider({
+var spider = new Spider({
     chapters: []
 });
 spider.addRule({

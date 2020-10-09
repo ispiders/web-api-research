@@ -28,7 +28,7 @@ var progress = (function () {
     };
 }());
 
-function parseMenu (menuSelector: string | HTMLElement, spider: Spider, doc: HTMLDocument) {
+function parseMenu (menuSelector: string | HTMLElement, spider: Spider<any>, doc: HTMLDocument) {
 
     let elems: NodeListOf<HTMLAnchorElement>;
 
@@ -42,44 +42,8 @@ function parseMenu (menuSelector: string | HTMLElement, spider: Spider, doc: HTM
     return elems;
 }
 
-function getEncoding () {
-
-    let charsetMeta = document.querySelector('meta[charset]');
-    let charset = 'utf-8';
-
-    if (charsetMeta) {
-        charset = charsetMeta.getAttribute('charset') || charset;
-    }
-    else {
-        let contentType = '';
-        let metaElements = document.querySelectorAll('meta');
-
-        for (let i = 0; i < metaElements.length; i++) {
-            let el = metaElements[i];
-            let equiv = el.getAttribute('http-equiv') || el.getAttribute('https-equiv');
-
-            equiv = equiv ? equiv.toLowerCase() : '';
-
-            if (equiv === 'content-type') {
-                contentType = el.getAttribute('content') || '';
-                break;
-            }
-        }
-
-        if (contentType) {
-            let matches = contentType.match(/charset=(\S*)/);
-
-            if (matches && matches[1]) {
-                charset = matches[1];
-            }
-        }
-    }
-
-    return charset.toLowerCase();
-}
-
-function analyseMenu (boundary: number = 100) {
-    let links = document.querySelectorAll('a[href]');
+function analyseMenu (doc: HTMLDocument, boundary: number = 100) {
+    let links = doc.querySelectorAll('a[href]');
     let elementsMap = new WeakMap<HTMLElement, number>();
     let elements: HTMLElement[] = [];
 
@@ -87,7 +51,7 @@ function analyseMenu (boundary: number = 100) {
 
         let el = links[i].parentElement;
 
-        while (el && el.parentElement !== document.body) {
+        while (el && el.parentElement !== doc.body) {
             let count = elementsMap.get(el);
 
             if (count) {
@@ -167,9 +131,10 @@ function analyseContent (doc: HTMLDocument, boundary: number = 1000) {
     return container;
 }
 
-function main (spider: Spider) {
+function main (spider: Spider<any>) {
 
-    let menu = analyseMenu();
+    let encoding = getEncoding(document);
+    let menu = analyseMenu(document);
 
     if (!menu) {
         console.error('menu element not found');
@@ -183,14 +148,15 @@ function main (spider: Spider) {
         let item: HTMLAnchorElement = links[i];
 
         spider.addTask(item.href, {}, {
+            encoding: encoding,
             title: item.innerText,
             isChapter: true
-        });
+        }, encoding);
     }
 }
 
 //
-spider = new Spider({
+var spider = new Spider({
     chapters: [] as any[]
 });
 
@@ -198,7 +164,7 @@ spider.addRule({
     match: (task) => {
         return task.data.isChapter === true;
     },
-    parse: (spider: Spider, doc: HTMLDocument, task: Task) => {
+    parse: (spider: Spider<any>, doc: HTMLDocument, task: Task) => {
 
         let container = analyseContent(doc);
 

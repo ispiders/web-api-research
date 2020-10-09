@@ -1,4 +1,4 @@
-let spider = new Spider();
+var spider = new Spider();
 
 function parseSectionList (sectionList: [number, number, number][]) {
 
