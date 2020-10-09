@@ -151,19 +151,19 @@ type Task = {
     data?: any;
 };
 
-class Spider {
+class Spider<S = any> {
 
     rules: Rule[];
     tasks: Task[];
-    state: object;
+    state: S;
     index: number = 0;
     interval: number = 500;
     paused: boolean = false;
 
-    constructor () {
+    constructor (state: S) {
         this.rules = [];
         this.tasks = [];
-        this.state = {};
+        this.state = state;
 
         this.preventUnload();
     }
@@ -271,21 +271,28 @@ class Spider {
             this.getText(task).then((text) => {
 
                 this.parse(text, task);
+            }, (err) => {
+                setTimeout(() => {
+                    this.run();
+                }, this.interval * 10);
             }).then(() => {
-
-                let hasNext = this.next();
-
-                if (hasNext && !this.paused) {
-                    setTimeout(() => {
-                        this.run();
-                    }, this.interval);
-                }
-                else if (!hasNext) {
-                    this.finished();
-                }
+                this.runNext();
             });
         }
         else {
+            this.finished();
+        }
+    }
+
+    runNext () {
+        let hasNext = this.next();
+
+        if (hasNext && !this.paused) {
+            setTimeout(() => {
+                this.run();
+            }, this.interval);
+        }
+        else if (!hasNext) {
             this.finished();
         }
     }
