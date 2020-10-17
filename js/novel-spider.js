@@ -45,7 +45,12 @@ function download(text, name = 'download.txt') {
 }
 function readURL(url, options = {}) {
     return fetch(url, options).then((response) => {
-        return response.blob();
+        if (response.status >= 200 && response.status < 300 || response.status === 304) {
+            return response.blob();
+        }
+        else {
+            return Promise.reject(response.status + ' ' + url);
+        }
     });
 }
 function getText(url, options = {}, encoding = 'utf-8') {
@@ -217,6 +222,7 @@ class Spider {
                 setTimeout(() => {
                     this.run();
                 }, this.interval * 10);
+                return Promise.reject(err);
             }).then(() => {
                 this.runNext();
             });
@@ -241,6 +247,7 @@ class Spider {
         return this.index >= this.tasks.length;
     }
 }
+
 var progress = (function () {
     let startTime = 0;
     let lastTime = 0;

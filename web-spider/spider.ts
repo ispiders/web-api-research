@@ -67,7 +67,12 @@ function readURL (url: string, options: RequestInit = {}): Promise<Blob> {
 
     return fetch(url, options).then((response) => {
 
-        return response.blob();
+        if (response.status >= 200 && response.status < 300 || response.status === 304) {
+            return response.blob();
+        }
+        else {
+            return Promise.reject(response.status + ' ' + url);
+        }
     });
 }
 
@@ -337,7 +342,10 @@ class Spider<S extends {}> {
                 setTimeout(() => {
                     this.run();
                 }, this.interval * 10);
+
+                return Promise.reject(err);
             }).then(() => {
+
                 this.runNext();
             });
         }
