@@ -51,7 +51,7 @@ function analyseMenu (doc: HTMLDocument, boundary: number = 100) {
 
         let el = links[i].parentElement;
 
-        while (el && el.parentElement !== doc.body) {
+        while (el && el !== doc.body) {
             let count = elementsMap.get(el);
 
             if (count) {
@@ -131,6 +131,21 @@ function analyseContent (doc: HTMLDocument, boundary: number = 1000) {
     return container;
 }
 
+function analyseNextLink (doc: HTMLDocument, regexp: RegExp = /^下\s*一\s*页$|^下\s*一\s*章$/) {
+
+    let links = doc.querySelectorAll<HTMLAnchorElement>('a[href]');
+
+    for (let i = 0; i < links.length; i++) {
+        let el = links[i];
+
+        if (el.textContent && regexp.test(el.textContent.trim())) {
+            return el.href;
+        }
+    }
+
+    return '';
+}
+
 function main (spider: Spider<any>) {
 
     let encoding = getEncoding(document);
@@ -167,6 +182,8 @@ spider.addRule({
     parse: (spider: Spider<any>, doc: HTMLDocument, task: Task) => {
 
         let container = analyseContent(doc);
+        let nextLink = analyseNextLink(doc);
+        let nextTaskUrl = spider.tasks[spider.index + 1] && spider.tasks[spider.index + 1].url;
 
         if (container) {
             spider.state.chapters.push({
@@ -174,6 +191,16 @@ spider.addRule({
                 title: task.data.title,
                 content: container.innerText
             });
+
+            // 如果下一页的链接地址跟下一个任务的链接地址不一样，可能是章节被分页
+            if (nextLink && nextLink !== nextTaskUrl) {
+                spider.insertAfterTask(task, nextLink, {}, {
+                    encoding: task.data.encoding,
+                    title: task.data.title,
+                    isChapter: true,
+                    isMorePage: true
+                }, task.encoding);
+            }
         }
         else {
             console.warn('chapter empty', task);

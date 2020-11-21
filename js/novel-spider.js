@@ -174,6 +174,15 @@ class Spider {
             encoding: encoding
         });
     }
+    insertAfterTask(task, url, options = {}, data, encoding) {
+        let index = this.tasks.indexOf(task);
+        this.tasks.splice(index + 1, 0, {
+            url: url,
+            options: options,
+            data: data,
+            encoding: encoding
+        });
+    }
     currentTask() {
         return this.tasks[this.index];
     }
@@ -192,23 +201,25 @@ class Spider {
         this.rules.push(rule);
     }
     parse(blob, task) {
+        let all = [];
         this.rules.forEach((rule) => {
             if (rule.match instanceof RegExp && rule.match.test(task.url)
                 || typeof rule.match === 'function' && rule.match(task)) {
                 if (rule.parse) {
                     if (rule.dataType === 'text') {
-                        readBlobText(blob, task.encoding).then((text) => {
-                            rule.parse(this, text, task);
-                        });
+                        all.push(readBlobText(blob, task.encoding).then((text) => {
+                            return rule.parse(this, text, task);
+                        }));
                     }
                     else {
-                        readBlobDocument(blob, task.encoding).then((doc) => {
-                            rule.parse(this, doc, task);
-                        });
+                        all.push(readBlobDocument(blob, task.encoding).then((doc) => {
+                            return rule.parse(this, doc, task);
+                        }));
                     }
                 }
             }
         });
+        return Promise.all(all);
     }
     run(force) {
         const task = this.currentTask();
@@ -217,7 +228,7 @@ class Spider {
         }
         if (task) {
             readURL(task.url, task.options).then((blob) => {
-                this.parse(blob, task);
+                return this.parse(blob, task);
             }, (err) => {
                 setTimeout(() => {
                     this.run();
@@ -247,7 +258,6 @@ class Spider {
         return this.index >= this.tasks.length;
     }
 }
-
 var progress = (function () {
     let startTime = 0;
     let lastTime = 0;
@@ -281,7 +291,7 @@ function analyseMenu(doc, boundary = 100) {
     let elements = [];
     for (let i = 0; i < links.length; i++) {
         let el = links[i].parentElement;
-        while (el && el.parentElement !== doc.body) {
+        while (el && el !== doc.body) {
             let count = elementsMap.get(el);
             if (count) {
                 elementsMap.set(el, count + 1);
@@ -341,6 +351,16 @@ function analyseContent(doc, boundary = 1000) {
     }
     return container;
 }
+function analyseNextLink(doc, regexp = /^下\s*一\s*页$|^下\s*一\s*章$/) {
+    let links = doc.querySelectorAll('a[href]');
+    for (let i = 0; i < links.length; i++) {
+        let el = links[i];
+        if (el.textContent && regexp.test(el.textContent.trim())) {
+            return el.href;
+        }
+    }
+    return '';
+}
 function main(spider) {
     let encoding = getEncoding(document);
     let menu = analyseMenu(document);
@@ -368,12 +388,23 @@ spider.addRule({
     },
     parse: (spider, doc, task) => {
         let container = analyseContent(doc);
+        let nextLink = analyseNextLink(doc);
+        let nextTaskUrl = spider.tasks[spider.index + 1] && spider.tasks[spider.index + 1].url;
         if (container) {
             spider.state.chapters.push({
                 url: task.url,
                 title: task.data.title,
                 content: container.innerText
             });
+            // 如果下一页的链接地址跟下一个任务的链接地址不一样，可能是章节被分页
+            if (nextLink && nextLink !== nextTaskUrl) {
+                spider.insertAfterTask(task, nextLink, {}, {
+                    encoding: task.data.encoding,
+                    title: task.data.title,
+                    isChapter: true,
+                    isMorePage: true
+                }, task.encoding);
+            }
         }
         else {
             console.warn('chapter empty', task);

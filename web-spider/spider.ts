@@ -273,6 +273,18 @@ class Spider<S extends {}> {
         });
     }
 
+    insertAfterTask (task: Task, url: string, options: RequestInit = {}, data?: any, encoding?: string) {
+
+        let index = this.tasks.indexOf(task);
+
+        this.tasks.splice(index + 1, 0, {
+            url: url,
+            options: options,
+            data: data,
+            encoding: encoding
+        });
+    }
+
     currentTask (): Task | undefined {
 
         return this.tasks[this.index];
@@ -303,6 +315,8 @@ class Spider<S extends {}> {
 
     parse (blob: Blob, task: Task) {
 
+        let all: Promise<any>[] = [];
+
         this.rules.forEach((rule) => {
 
             if (rule.match instanceof RegExp && rule.match.test(task.url)
@@ -311,18 +325,20 @@ class Spider<S extends {}> {
                 if (rule.parse) {
 
                     if (rule.dataType === 'text') {
-                        readBlobText(blob, task.encoding).then((text) => {
-                            rule.parse(this, text, task);
-                        });
+                        all.push(readBlobText(blob, task.encoding).then((text) => {
+                            return rule.parse(this, text, task);
+                        }));
                     }
                     else {
-                        readBlobDocument(blob, task.encoding).then((doc) => {
-                            rule.parse(this, doc, task);
-                        });
+                        all.push(readBlobDocument(blob, task.encoding).then((doc) => {
+                            return rule.parse(this, doc, task);
+                        }));
                     }
                 }
             }
         });
+
+        return Promise.all(all);
     }
 
     run (force?: boolean): void {
@@ -337,7 +353,7 @@ class Spider<S extends {}> {
 
             readURL(task.url, task.options).then((blob) => {
 
-                this.parse(blob, task);
+                return this.parse(blob, task);
             }, (err) => {
                 setTimeout(() => {
                     this.run();
