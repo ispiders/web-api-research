@@ -146,6 +146,16 @@ function setBaseUrl(doc, baseUrl, force = false) {
     }
     base.href = baseUrl;
 }
+function validUrl(url) {
+    try {
+        new URL(url);
+        return true;
+    }
+    catch (e) {
+        console.error('invalid url: ' + url);
+        return false;
+    }
+}
 class Spider {
     constructor(state) {
         this.index = 0;
@@ -167,6 +177,9 @@ class Spider {
         window.onbeforeunload = () => true;
     }
     addTask(url, options = {}, data, encoding) {
+        if (!validUrl(url)) {
+            return;
+        }
         this.tasks.push({
             url: url,
             options: options,
@@ -175,6 +188,9 @@ class Spider {
         });
     }
     insertAfterTask(task, url, options = {}, data, encoding) {
+        if (!validUrl(url)) {
+            return;
+        }
         let index = this.tasks.indexOf(task);
         this.tasks.splice(index + 1, 0, {
             url: url,
@@ -230,9 +246,11 @@ class Spider {
             readURL(task.url, task.options).then((blob) => {
                 return this.parse(blob, task);
             }, (err) => {
-                setTimeout(() => {
-                    this.run();
-                }, this.interval * 10);
+                if (!this.paused) {
+                    setTimeout(() => {
+                        this.run();
+                    }, this.interval * 10);
+                }
                 return Promise.reject(err);
             }).then(() => {
                 this.runNext();

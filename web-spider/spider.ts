@@ -209,6 +209,18 @@ function setBaseUrl (doc: HTMLDocument, baseUrl: string, force: boolean = false)
     base.href= baseUrl;
 }
 
+function validUrl (url: string) {
+
+    try {
+        new URL(url);
+        return true;
+    }
+    catch (e) {
+        console.error('invalid url: ' + url);
+        return false;
+    }
+}
+
 interface TMatchFunction {
     (url: Task): boolean;
 }
@@ -265,6 +277,10 @@ class Spider<S extends {}> {
 
     addTask (url: string, options: RequestInit = {}, data?: any, encoding?: string): void {
 
+        if (!validUrl(url)) {
+            return;
+        }
+
         this.tasks.push({
             url: url,
             options: options,
@@ -274,6 +290,10 @@ class Spider<S extends {}> {
     }
 
     insertAfterTask (task: Task, url: string, options: RequestInit = {}, data?: any, encoding?: string) {
+
+        if (!validUrl(url)) {
+            return;
+        }
 
         let index = this.tasks.indexOf(task);
 
@@ -355,9 +375,12 @@ class Spider<S extends {}> {
 
                 return this.parse(blob, task);
             }, (err) => {
-                setTimeout(() => {
-                    this.run();
-                }, this.interval * 10);
+
+                if (!this.paused) {
+                    setTimeout(() => {
+                        this.run();
+                    }, this.interval * 10);
+                }
 
                 return Promise.reject(err);
             }).then(() => {
