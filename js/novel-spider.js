@@ -427,7 +427,7 @@ spider.addRule({
         else {
             console.warn('chapter empty', task);
         }
-        progress(spider.state.chapters.length, spider.tasks.length);
+        progress(spider.state.chapters.length, spider.tasks.length - spider.index - 1);
     }
 });
 main(spider);

@@ -243,6 +243,7 @@ type Task = {
     options: RequestInit;
     encoding?: string;
     data?: any;
+    cache?: Blob;
 };
 
 class Spider<S extends {}> {
@@ -253,6 +254,7 @@ class Spider<S extends {}> {
     index: number = 0;
     interval: number = 500;
     paused: boolean = false;
+    cache: boolean = false;
 
     constructor (state: S) {
         this.rules = [];
@@ -359,6 +361,23 @@ class Spider<S extends {}> {
         });
 
         return Promise.all(all);
+    }
+
+    fetch (task: Task) {
+
+        if (this.cache && task.cache) {
+
+            return Promise.resolve(task.cache);
+        }
+
+        return readURL(task.url, task.options).then((blob) => {
+
+            if (this.cache) {
+                task.cache = blob;
+            }
+
+            return blob;
+        });
     }
 
     run (force?: boolean): void {
