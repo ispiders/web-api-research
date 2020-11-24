@@ -434,3 +434,4 @@ class Spider<S extends {}> {
     }
 }
 
+var spider: Spider<any>;

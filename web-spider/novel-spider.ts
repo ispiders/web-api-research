@@ -171,7 +171,7 @@ function main (spider: Spider<any>) {
 }
 
 //
-var spider = new Spider({
+spider = new Spider({
     chapters: [] as any[]
 });
 
