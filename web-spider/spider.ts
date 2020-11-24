@@ -390,7 +390,8 @@ class Spider<S extends {}> {
 
         if (task) {
 
-            readURL(task.url, task.options).then((blob) => {
+            // readURL(task.url, task.options).then((blob) => {
+            this.fetch(task).then((blob) => {
 
                 return this.parse(blob, task);
             }, (err) => {
