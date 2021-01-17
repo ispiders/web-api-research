@@ -52,6 +52,10 @@ class Spider {
         this.tasks = tasks;
         this.state = [];
     }
+    saveState() {
+        localStorage.setItem('spider-state', JSON.stringify(this.state));
+        localStorage.setItem('spider-finished', String(this.finished));
+    }
     addTask(task) {
         this.tasks.push(task);
     }
@@ -209,13 +213,21 @@ function analyseMenu(boundary = 100) {
     console.log('analized menu', ret);
     return ret;
 }
-function analyseContent(doc) {
+function analyseContent(doc, boundary = 1000) {
+    let excludeElements = doc.body.querySelectorAll('script,style,textarea');
+    for (let i = 0; i < excludeElements.length; i++) {
+        let el = excludeElements[i];
+        el.parentElement.removeChild(el);
+    }
     let boundary = 1000;
     let els = doc.body.querySelectorAll('*');
     let container = null;
     let tmp = 0;
     for (let i = 0; i < els.length; i++) {
         let el = els[i];
+        if (['script', 'style', 'textarea'].indexOf(el.nodeName.toLowerCase()) !== -1) {
+            continue;
+        }
         let text = el.innerText;
         if (text.length > boundary && (!tmp || text.length < tmp)) {
             tmp = text.length;

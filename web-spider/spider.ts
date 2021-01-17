@@ -21,14 +21,20 @@ function diff (arr1, arr2) {
     return diffArr;
 }
 
-function unique<T> (arr: T[]): T[] {
+function unique<T> (arr: T[], key?: string): T[] {
 
     let map = new Map();
 
     return arr.reduce((ret, item) => {
 
-        if (!map.get(item)) {
-            map.set(item, true);
+        let index = item;
+
+        if (typeof key !== 'undefined') {
+            index = item[key];
+        }
+
+        if (!map.get(index)) {
+            map.set(index, true);
             ret.push(item);
         }
 

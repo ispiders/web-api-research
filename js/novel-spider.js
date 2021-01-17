@@ -369,7 +369,7 @@ function analyseContent(doc, boundary = 1000) {
     }
     return container;
 }
-function analyseNextLink(doc, regexp = /^下\s*一\s*页$|^下\s*一\s*章$/) {
+function analyseNextLink(doc, regexp = /^下\s*一\s*页$/) {
     let links = doc.querySelectorAll('a[href]');
     for (let i = 0; i < links.length; i++) {
         let el = links[i];
