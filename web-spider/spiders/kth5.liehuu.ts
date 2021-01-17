@@ -1,22 +1,27 @@
-spider = new Spider();
+spider = new Spider({});
 
 function main () {
 
-    let models = ['mtc'];
-    let subjects = ['k1', 'k4', 'k1_2', 'k1_3', 'k4_2', 'k4_3'];
+    let host = 'https://app.kuaitongjiakao.com';
+    let models = ['cart', 'bus', 'truck', 'mtc'];
+    let subjects = ['k1', 'k4'];
 
     models.forEach((model) => {
-        subjects.forEach((subject) => {
+        subjects.forEach((km) => {
 
-            spider.addTask(
-                `https://app.kuaitongjiakao.com/skill/getColumn?model=${model}&subject=${subject}`,
-                {},
-                {
-                    category: true,
-                    model: model,
-                    subject: subject
-                }
-            );
+            ['', 2, 3, 4].forEach((type) => {
+                let subject = type ? km + '_' + type : km;
+
+                spider.addTask(
+                    `${host}/skill/getColumn?model=${model}&subject=${subject}`,
+                    {},
+                    {
+                        category: true,
+                        model: model,
+                        subject: subject
+                    }
+                );
+            });
         });
     });
 
@@ -39,7 +44,7 @@ function main () {
                 response.data.forEach((category, index) => {
 
                     spider.addTask(
-                        `https://app.kuaitongjiakao.com/question/getQuestions?model=${task.data.model}&columnid=${category.id}&subject=${task.data.subject}`,
+                        `${host}/question/getQuestions?model=${task.data.model}&columnid=${category.id}&subject=${task.data.subject}`,
                         {},
                         {
                             questions: true,
