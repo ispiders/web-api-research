@@ -76,7 +76,8 @@ function getFullTableData () {
     }
     else if (window.SpreadsheetApp) {
 
-        return SpreadsheetApp.spreadsheet.sheets[0].data.rowData.map((row) => {
+        // return SpreadsheetApp.spreadsheet.sheets[0].data.rowData.map((row) => {
+        return SpreadsheetApp.spreadsheet.sheetManager.activeSheet.data.rowData.map((row) => {
             return row.values.map((cell) => {
                 return cell.editValue;
             });
