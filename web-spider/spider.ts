@@ -396,6 +396,10 @@ class Spider<S extends {}> {
 
         if (task) {
 
+            if (task.data && typeof task.data.beforeTask === 'function') {
+                task.data.beforeTask.call(task, this);
+            }
+
             // readURL(task.url, task.options).then((blob) => {
             this.fetch(task).then((blob) => {
 
