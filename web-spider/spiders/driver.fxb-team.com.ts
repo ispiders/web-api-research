@@ -1,65 +1,82 @@
-spider = new Spider({
+spider = (function () {
+
+let spider = new Spider({
     categories: [],
-    questions: [],
-    cateMap: {},
-    questionMap: {}
+    questions: []
 });
 
 function main () {
 
-    let host = 'https://app.czjkxitong.cn';
-    let models = ['cart', 'bus', 'truck', 'mtc'];
-    let subjects = ['k1', 'k4'];
+    let host = 'https://driver.fxb-team.com';
+    let subLists = [...document.querySelectorAll<HTMLDivElement>('.sub-list')];
+    let cates: {
+        kemu: string;
+        licence: string;
+        type: string;
+        typelink: string;
+        subject: string;
+        typeid: string;
+    }[] = [];
 
-    models.forEach((model) => {
-        subjects.forEach((km) => {
+    subLists.forEach((el) => {
+        let title = el.querySelector<HTMLDivElement>('.sub-tit .tit').innerText.trim();
+        let licence = el.querySelector<HTMLDivElement>('.sub-tit .xuan').innerText.trim();
 
-            ['', 2, 3, 4].forEach((type) => {
-                let subject = type ? km + '_' + type : km;
+        let cateLinks = [...el.querySelectorAll<HTMLAnchorElement>('.subs a')];
 
-                spider.addTask(
-                    `${host}/skill/getColumn?model=${model}&subject=${subject}`,
-                    {},
-                    {
-                        category: true,
-                        model: model,
-                        subject: subject
-                    }
-                );
-            });
+        cateLinks.forEach((a) => {
+            let type = a.innerText.trim();
+            let typelink = a.href;
+
+            if (/顺序|精选|分类/.test(type)) {
+                let url = new URL(typelink);
+                cates.push({
+                    kemu: title,
+                    licence: licence,
+                    type: type,
+                    typelink: typelink,
+                    subject: url.searchParams.get('subject') || '1',
+                    typeid: url.searchParams.get('id') || ''
+                });
+            }
+        });
+    });
+
+    cates.forEach((cate) => {
+        spider.addTask(cate.typelink, {}, {
+            catelist: true,
+            cate: cate
         });
     });
 
     spider.addRule({
         match: function (task) {
-            return task.data.category;
+            return task.data.catelist;
         },
-        dataType: 'text',
-        parse: function (spider, text, task) {
+        dataType: 'html',
+        parse: function (spider, doc: Document, task) {
 
-            let response = parseJSON(text);
+            let lists = [...doc.querySelectorAll<HTMLDivElement>('.list-box')];
 
-            spider.state.categories = spider.state.categories.concat(response.data);
+            lists.forEach((el) => {
+                let name = el.querySelector<HTMLDivElement>('.name').innerText.trim();
+                let link = el.querySelector<HTMLAnchorElement>('.voice-box a').href;
+                let id = new URL(link).searchParams.get('id');
 
-            response.data.forEach((cate) => {
+                let category = {
+                    id: id,
+                    name: name,
+                    link: link,
+                    ...task.data.cate
+                };
+                console.log('category', category);
 
-                if (!spider.state.cateMap[cate.id]) {
-                    spider.state.cateMap[cate.id] = cate;
+                spider.state.categories.push(category);
 
-                    spider.addTask(
-                        `${host}/question/getQuestions?model=${task.data.model}&columnid=${cate.id}&subject=${task.data.subject}`,
-                        {},
-                        {
-                            questions: true,
-                            model: task.data.model,
-                            subject: task.data.subject
-                        }
-                    );
-                }
-                else {
-                    console.log('cate', spider.state.cateMap[cate.id]);
-                    console.log('cate1', task.data.model, task.data.subject, cate);
-                }
+                spider.addTask(`https://driver.fxb-team.com/api/answer?id=${id}&rand=0`, {}, {
+                    category: category,
+                    questions: true
+                });
             });
         }
     });
@@ -73,11 +90,15 @@ function main () {
 
             let response = parseJSON(text);
 
-            spider.state.questions = spider.state.questions.concat(response.data);
+            if (response.code !== 0) {
+                throw new Error('question api result error:' + text);
+            }
 
             response.data.forEach((q) => {
-                spider.state.questionMap[q.id] = q;
+                q.category_id = task.data.category.id
             });
+
+            spider.state.questions = spider.state.questions.concat(response.data);
         }
     });
 
@@ -111,39 +132,37 @@ function sourcePath (url, withHost = false) {
 }
 
 interface TCategory {
-    id: number;
-    sort: number;
-    color: string;
-    icon: string;
-    model: string;
+    kemu: string;
+    licence: string;
+    type: string;
+    typelink: string;
     subject: string;
-    title: string;
+    typeid: string;
+    id: string;
+    name: string;
+    link: string;
 }
 
+type TOptionKey = 'A'|'B'|'C'|'D';
+
 interface TQuestion {
+    answer: string[];
+    answer_rate: string;
+    broadcast_voice: string;
+    explain: string;
     id: number;
-    columnId: number;
-    columnId2: number;
-    columnId3: number;
-    columnId4: number;
-    idYdt: number;
-    number: number;
+    options: {[key: string]: {
+        key: TOptionKey;
+        value: string;
+        class: string;
+    }};
+    relation_id: number;
+    skill_thumb: string;
+    skill_voice: string;
+    thumb: string;
+    title: string;
     type: number;
-    answer: string;
-    answerkeyword: string;
-    explainGif: string;
-    explainJq: string;
-    explainJs: string;
-    explainMp3: string;
-    image: string;
-    imageYdt: string;
-    issue: string;
-    keywordcolor: string;
-    model: string;
-    opts: string;
-    skillkeyword: string;
-    subject: string;
-    titlekeyword: string;
+    type_name: string;
 }
 
 function publicPath (path, prefix = '/public/sth5') {
@@ -471,3 +490,27 @@ function newgen () {
         downloadSqls(sqls, 'new');
     });
 }
+
+interface TTargetCategory {
+    id: string;
+    model: 'cart' | 'mtc';
+    subject: string;
+    title: string;
+}
+
+interface TCategoryMap {
+    [key: string]: string;
+}
+
+function mapCategories (categories: TCategory[]) {
+
+    let map: TCategoryMap = {};
+
+    categories.forEach((cate) => {
+
+    });
+}
+
+return spider;
+
+}());
