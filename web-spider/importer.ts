@@ -65,3 +65,17 @@ function generateInsertSql (tableName: string, data: any[], options: TGenerateOp
 
     return sql;
 }
+
+function download (text: string | object, name: string = 'download.txt') {
+
+    if (typeof text !== 'string') {
+        text = JSON.stringify(text, null, 4);
+    }
+
+    let file = new File([text], name);
+    let a = document.createElement('a');
+
+    a.download = name;
+    a.href = URL.createObjectURL(file);
+    a.click();
+}

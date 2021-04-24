@@ -83,14 +83,16 @@ function main () {
             let lis = [...doc.querySelectorAll('.com-sign-container > ul > li')];
 
             lis.forEach((li) => {
-                let sign = {
-                    title: li.querySelector('.title').innerText.trim(),
-                    desc: li.querySelector('.img-div').getAttribute('data-desc'),
-                    image: li.querySelector('img').src,
-                    cate: task.data.cate.name
-                };
+                if (li.querySelector('.img-div')) {
+                    let sign = {
+                        title: li.querySelector('.title').innerText.trim(),
+                        desc: li.querySelector('.img-div').getAttribute('data-desc'),
+                        image: li.querySelector('img').src,
+                        cate: task.data.cate.name
+                    };
 
-                spider.state.signs.push(sign);
+                    spider.state.signs.push(sign);
+                }
             });
         }
     })

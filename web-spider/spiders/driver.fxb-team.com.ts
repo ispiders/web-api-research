@@ -19,26 +19,30 @@ function main () {
     }[] = [];
 
     subLists.forEach((el) => {
-        let title = el.querySelector<HTMLDivElement>('.sub-tit .tit').innerText.trim();
-        let licence = el.querySelector<HTMLDivElement>('.sub-tit .xuan').innerText.trim();
 
-        let cateLinks = [...el.querySelectorAll<HTMLAnchorElement>('.subs a')];
+        let subbox = [...el.querySelectorAll<HTMLDivElement>('.sub-box')];
 
-        cateLinks.forEach((a) => {
-            let type = a.innerText.trim();
-            let typelink = a.href;
+        subbox.forEach(sub => {
+            let title = sub.previousElementSibling.querySelector('.tit').innerText.trim();
+            let licence = sub.previousElementSibling.querySelector('.xuan').innerText.trim();
+            let cateLinks = [...sub.querySelectorAll<HTMLAnchorElement>('.subs a')];
 
-            if (/顺序|精选|分类/.test(type)) {
-                let url = new URL(typelink);
-                cates.push({
-                    kemu: title,
-                    licence: licence,
-                    type: type,
-                    typelink: typelink,
-                    subject: url.searchParams.get('subject') || '1',
-                    typeid: url.searchParams.get('id') || ''
-                });
-            }
+            cateLinks.forEach((a) => {
+                let type = a.innerText.trim();
+                let typelink = a.href;
+
+                if (/顺序|精选|分类/.test(type)) {
+                    let url = new URL(typelink);
+                    cates.push({
+                        kemu: title,
+                        licence: licence,
+                        type: type,
+                        typelink: typelink,
+                        subject: url.searchParams.get('subject') || '1',
+                        typeid: url.searchParams.get('id') || ''
+                    });
+                }
+            });
         });
     });
 
@@ -131,6 +135,8 @@ function sourcePath (url, withHost = false) {
     }
 }
 
+main();
+
 interface TCategory {
     kemu: string;
     licence: string;
@@ -163,354 +169,246 @@ interface TQuestion {
     title: string;
     type: number;
     type_name: string;
+    category_id: string;
 }
 
-function publicPath (path, prefix = '/public/sth5') {
+function prepareData (categories: TCategory[], qs: TQuestion[]) {
 
-    return path ? prefix + path : '';
-}
+    function options (opts) {
+        return Object.keys(opts).sort().map((key) => {
+            return opts[key].value.trim();
+        });
+    }
 
-function generateSql (categories, questions: TQuestion[], questionTableName = 'ims_quickpass_drivingtest_questions', categoryTableName = 'ims_quickpass_drivingtest_category') {
+    function answers (options, answer) {
+        return answer.map((key) => {
+            return options['ABCD'.indexOf(key)];
+        });
+    }
 
-    let cateid = 120;
-    let categorySql = 'truncate table ' + categoryTableName + ';\n';
-    let cateMap = {};
+    function cateId (model: string, subject: string, id: string) {
+        return [model, subject, id].join('-');
+    }
 
-    categorySql += 'insert into ' + categoryTableName + ' (`id`, `model`, `subject`, `title`, `icon`, `color`, `sort`) values \n';
+    function licenceModel (licence) {
+        return {
+            '(C1C2C3)': 'cart',
+            '(A1A3B1)': 'bus',
+            '(A2B2)': 'truck',
+            '(DEF)': 'mtc'
+        }[licence];
+    }
 
-    categorySql += categories.map((category) => {
-
-        let cid = cateid++;
-
-        cateMap[1000 + category.id] = cid + 1000;
-
-        return '(' + [
-            category.id, // cid
-            JSON.stringify(category.model),
-            JSON.stringify(category.subject),
-            JSON.stringify(category.title),
-            JSON.stringify(category.icon),
-            JSON.stringify(category.color),
-            category.sort
-        ].join(',') + ')';
-    }).join(',\n') + ';\n';
-
-    let questionSql = 'truncate table ' + questionTableName + ';\n';
-    let questionSqlHead = 'insert into ' + questionTableName + ' (' +
-        [
-            '`id`',
-            '`id_ydt`',
-            '`number`',
-            '`model`',
-            '`subject`',
-            '`answer`',
-            '`column_id`',
-            '`column_id2`',
-            '`column_id3`',
-            '`column_id4`',
-            '`issue`',
-            '`opts`',
-            '`explain_jq`',
-            '`explain_js`',
-            '`explain_mp3`',
-            '`explain_gif`',
-            '`image`',
-            '`image_ydt`',
-            '`keywordcolor`',
-            '`titlekeyword`',
-            '`answerkeyword`',
-            '`skillkeyword`',
-            '`type`',
-            '`free`',
-            '`highlight`'
-        ] + ') values \n';
-
-    let explainGif: string[] = [];
-    let explainMp3: string[] = [];
-    let image: string[] = [];
-    let imageYdt: string[] = [];
-
-    questions = questions.sort((a, b) => a.id - b.id);
-
-    questions.forEach((question, index) => {
-
-        question.explainGif && explainGif.push(sourcePath(question.explainGif, true));
-        question.explainMp3 && explainMp3.push(sourcePath(question.explainMp3, true));
-        question.image && image.push(sourcePath(question.image, true));
-        question.imageYdt && imageYdt.push(sourcePath(question.imageYdt, true));
-
-        let values = '(' + [
-            question.id,
-            question.idYdt,
-            question.number,
-            JSON.stringify(question.model),
-            JSON.stringify(question.subject),
-            JSON.stringify(question.answer),
-            question.columnId || 0,
-            question.columnId2 || 0,
-            question.columnId3 || 0,
-            question.columnId4 || 0,
-            JSON.stringify(question.issue),
-            JSON.stringify(question.opts),
-            JSON.stringify(question.explainJq),
-            JSON.stringify(question.explainJs),
-            JSON.stringify(publicPath(sourcePath(question.explainMp3, false))),
-            JSON.stringify(publicPath(sourcePath(question.explainGif, false))),
-            JSON.stringify(publicPath(sourcePath(question.image, false))),
-            JSON.stringify(publicPath(sourcePath(question.imageYdt, false))),
-            JSON.stringify(question.keywordcolor),
-            JSON.stringify(question.titlekeyword),
-            JSON.stringify(question.answerkeyword),
-            JSON.stringify(question.skillkeyword),
-            question.type,
-            0, // free
-            JSON.stringify(unique([
-                ...question.titlekeyword.split('-'),
-                ...question.answerkeyword.split('-'),
-                ...question.skillkeyword.split('-')
-            ].filter(e => !!e)).join('-')) // highlight
-        ].join(',') + ')';
-
-        if (index % 100 === 0) {
-            questionSql += (index !== 0 ? ';\n' : '') + questionSqlHead + values;
+    function cateSubject (catetype: number, subject: number) {
+        if (catetype === 1) {
+            return 'k' + subject;
+        }
+        else if (catetype === 2 || catetype === 3) {
+            return 'k' + subject + '_' + catetype;
         }
         else {
-            questionSql += ',\n' + values;
+            console.error('catetype error:', catetype);
         }
-    });
+    }
 
-    questionSql += ';\n';
+    function cateType (typeText) {
+        return {
+            '顺序练习': 1,
+            '精选必考题': 2,
+            '分类练习': 3
+        }[typeText];
+    }
 
-    let images = unique([...image, ...explainGif, ...imageYdt]).sort();
+    function replaceMark (text: string) {
 
-    explainMp3 = unique(explainMp3).sort();
+        if (!text) {
+            return text;
+        }
 
-    return {
-        categorySql,
-        questionSql,
-        audios: explainMp3.join('\n'),
-        images: images.join('\n')
+        return text.replace(/<([a-z]+)>(.*?)<\/\1>/ig, (match, match1, match2) => {
+            console.log('replaceMark', match2);
+            return '{' + match2 + '}';
+        });
+    }
+
+    function attchementPath (uri, prefix = '') {
+
+        if (uri) {
+            let url = new URL(uri);
+            let path = url.pathname + url.search;
+
+            return prefix ? prefix + path : path;
+        }
+
+        return uri;
+    }
+
+    let typeMap = {
+        1: 1, // 判断
+        0: 2, // 单选
+        2: 3 // 多选
     };
-}
 
-function downloadSqls (sqls, id = '1') {
-    Object.keys(sqls).forEach((key, index) => {
-        setTimeout(() => download(sqls[key], 'sth5-' + id + '-' + key + '.sql'), 1000 * index);
-    });
-}
+    let modelMap = {
+        'x': 'cart',
+        'k': 'bus',
+        'h': 'truck',
+        'm': 'mtc'
+    };
 
-async function sql () {
-    let categories = await fetch('./data/sth5-cates.json').then(r => r.json());
-    let questions = await fetch('./data/sth5-questions.json').then(r => r.json());
+    let subjectMap = {
+        1: 'k1',
+        2: 'k4'
+    };
 
-    let sqls = generateSql(categories, questions);
+    let cateIdMap = {};
+    let cateUid = 1000;
+    let cates: any[] = [];
 
-    return sqls;
-}
+    let questionMap = {};
+    let questionUid = 100000;
+    let questions: any[] = [];
 
-async function genFree () {
+    // let questionCateRelationUid = 100000;
+    // let questionCateRelations: any[] = [];
 
-    let questions = await fetch('./data/sth5-free-questions.json').then(r => r.json());
-
-    let sqls = generateSql([], questions, 'ims_quickpass_drivingtest_freequestions');
-
-    downloadSqls(sqls, 'free');
-}
-
-function gen () {
-    sql().then((sqls) => {
-        window.sqls = sqls;
-        downloadSqls(sqls);
-    });
-}
-
-// 新版题库
-function generateTrainingSql (categories, questions: TQuestion[], questionTableName = 'eb_training_question', categoryTableName = 'eb_training_category') {
-
-    let cateid = 1;
-    let categorySql = 'truncate table ' + categoryTableName + ';\n';
     let cateMap = {};
 
-    categorySql += 'insert into ' + categoryTableName + ' (`id`, `pids`, `model`, `subject`, `title`, `image`, `color`, `sort`) values \n';
+    categories.forEach((cate) => {
+        let model = licenceModel(cate.licence);
+        let type = cateType(cate.type);
+        let subject = cateSubject(type, Number(cate.subject));
+        let cid = Number(cate.id);
 
-    categorySql += categories.map((category) => {
+        cateMap[cid] = cate;
 
-        let cid = cateid++;
-        let parts = category.subject.split('_');
-        let subject = parts[0];
-        let pids = [',', (parts[1] || 1), ','].join('');
-
-        cateMap[category.id] = cid;
-
-        return '(' + [
-            category.id, // cid
-            JSON.stringify(pids),
-            JSON.stringify(category.model),
-            JSON.stringify(subject),
-            JSON.stringify(category.title),
-            JSON.stringify(category.icon),
-            JSON.stringify(category.color),
-            category.sort
-        ].join(',') + ')';
-    }).join(',\n') + ';\n';
-
-    let relationId = 0;
-    let questionCateSql = 'truncate table eb_training_question_cates;\n';
-    let questionCateSqlHead = 'insert into eb_training_question_cates (' + [
-        '`id`',
-        '`cid`',
-        '`qid`'
-    ] + ') values \n';
-
-    let questionSql = 'truncate table ' + questionTableName + ';\n';
-    let questionSqlHead = 'insert into ' + questionTableName + ' (' +
-        [
-            '`id`',
-            '`id_ydt`',
-            '`number`',
-            // '`model`',
-            // '`subject`',
-            '`answer`',
-            '`title`',
-            '`opts`',
-            '`explain_jq`',
-            '`explain_js`',
-            '`explain_mp3`',
-            '`explain_gif`',
-            '`image`',
-            '`image_ydt`',
-            '`keywordcolor`',
-            '`titlekeyword`',
-            '`answerkeyword`',
-            '`skillkeyword`',
-            '`type`',
-            '`free`',
-            '`highlight`'
-        ] + ') values \n';
-
-    let explainGif: string[] = [];
-    let explainMp3: string[] = [];
-    let image: string[] = [];
-    let imageYdt: string[] = [];
-
-    questions = questions.sort((a, b) => a.id - b.id);
-
-    questions.forEach((question, index) => {
-
-        question.explainGif && explainGif.push(sourcePath(question.explainGif, true));
-        question.explainMp3 && explainMp3.push(sourcePath(question.explainMp3, true));
-        question.image && image.push(sourcePath(question.image, true));
-        question.imageYdt && imageYdt.push(sourcePath(question.imageYdt, true));
-
-        let values = '(' + [
-            question.id,
-            question.idYdt,
-            question.number,
-            // JSON.stringify(question.model),
-            // JSON.stringify(question.subject),
-            JSON.stringify(question.answer),
-            JSON.stringify(question.issue),
-            JSON.stringify(question.opts),
-            JSON.stringify(question.explainJq),
-            JSON.stringify(question.explainJs),
-            JSON.stringify(publicPath(sourcePath(question.explainMp3, false))),
-            JSON.stringify(publicPath(sourcePath(question.explainGif, false))),
-            JSON.stringify(publicPath(sourcePath(question.image, false))),
-            JSON.stringify(publicPath(sourcePath(question.imageYdt, false))),
-            JSON.stringify(question.keywordcolor),
-            JSON.stringify(question.titlekeyword),
-            JSON.stringify(question.answerkeyword),
-            JSON.stringify(question.skillkeyword),
-            question.type,
-            0, // free
-            JSON.stringify(unique([
-                ...question.titlekeyword.split('-'),
-                ...question.answerkeyword.split('-'),
-                ...question.skillkeyword.split('-')
-            ].filter(e => !!e)).join('-')) // highlight
-        ].join(',') + ')';
-
-        if (index % 100 === 0) {
-            questionSql += (index !== 0 ? ';\n' : '') + questionSqlHead + values;
-        }
-        else {
-            questionSql += ',\n' + values;
-        }
-
-        ['columnId', 'columnId2', 'columnId3', 'columnId4'].forEach((key) => {
-            if (question[key]) {
-                let index = relationId;
-
-                relationId++;
-
-                let relationValues = '(' + [
-                    relationId,
-                    question[key] - 1000,
-                    question.id
-                ].join(',') + ')';
-
-                if (index % 100 === 0) {
-                    questionCateSql += (index !== 0 ? ';\n' : '') + questionCateSqlHead + relationValues;
-                }
-                else {
-                    questionCateSql += ',\n' + relationValues;
-                }
-            }
+        cates.push({
+            id: cid,
+            title: cate.name.trim().replace(/^\d+\.(?:科目(?:一|四))?|\s*\(\d+题\)$/g, ''),
+            model: model,
+            subject: subject
         });
     });
 
-    questionSql += ';\n';
-    questionCateSql += ';\n';
+    let filesMap = {};
 
-    let images = unique([...image, ...explainGif, ...imageYdt]).sort();
+    qs.forEach((q) => {
+        let type = typeMap[q.type];
+        let opts = options(q.options);
+        let answer = answers(opts, q.answer);
+        let qid = questionUid++;
+        let cid = Number(q.category_id);
+        let cate: TCategory = cateMap[cid];
+        let catetype = cateType(cate.type);
 
-    explainMp3 = unique(explainMp3).sort();
+        let question = questionMap[q.id];
+
+        if (question) {
+            // if (catetype === 1) {
+            //     question.column_id = cid;
+            // }
+            // else if ([2, 3].indexOf(catetype) !== -1) {
+            //     question['column_id' + catetype] = cid;
+            // }
+
+            throw new Error('目标数据库不支持一道题对应多个分类，只能重复题目来存在不同分类下');
+        }
+        else {
+            question = {
+                id: qid,
+                type: type,
+                issue: q.title.trim(),
+                answer: answer.join('-'),
+                opts: opts.join('-'),
+                image: attchementPath(q.thumb, '/attachment/fxb'),
+                explain_gif: attchementPath(q.skill_thumb, '/attachment/fxb'),
+                explain_js: q.explain,
+                explain_jq: '',
+                explain_mp3: attchementPath(q.skill_voice, '/attachment/fxb'),
+                question_mp3: attchementPath(q.broadcast_voice, '/attachment/fxb'),
+                model: licenceModel(cate.licence),
+                subject: 'k' + cate.subject,
+                column_id: 0,
+                column_id2: 0,
+                column_id3: 0,
+            };
+
+            if (catetype === 1) {
+                question.column_id = cid;
+            }
+            else if ([2, 3].indexOf(catetype) !== -1) {
+                question['column_id' + catetype] = cid;
+            }
+
+            questions.push(question);
+
+            // 目标数据库不支持一道题对应多个分类，只能重复题目来存在不同分类下
+            // questionMap[q.id] = question;
+
+            if (q.thumb) {
+                filesMap[q.thumb] = 1;
+            }
+
+            if (q.skill_thumb) {
+                filesMap[q.skill_thumb] = 1;
+            }
+
+            if (q.skill_voice) {
+                filesMap[q.skill_voice] = 1;
+            }
+
+            if (q.broadcast_voice) {
+                filesMap[q.broadcast_voice] = 1;
+            }
+        }
+    });
 
     return {
-        categorySql,
-        questionSql,
-        questionCateSql,
-        audios: explainMp3.join('\n'),
-        images: images.join('\n')
+        cates,
+        questions,
+        files: Object.keys(filesMap)
     };
 }
 
-async function newsql () {
-    let categories = await fetch('./data/sth5-cates.json').then(r => r.json());
-    let questions = await fetch('./data/sth5-questions.json').then(r => r.json());
+function generateSql (cates, qs) {
 
-    let sqls = generateTrainingSql(categories, questions);
+    let data = prepareData(cates, qs);
+
+    return {
+        cateSql: generateInsertSql('ims_quickpass_drivingtest_category', data.cates, {maxRow: 100}),
+        questionSql: generateInsertSql('ims_quickpass_drivingtest_questions', data.questions, {maxRow: 100}),
+        // questionCateSql: generateInsertSql('eb_training_question_cates', data.questionCateRelations, {maxRow: 100}),
+        files: data.files.join('\n')
+    };
+}
+
+function downloadSql (cates, qs) {
+    let sqls = generateSql(cates, qs);
+
+    window.downloadData = sqls;
+
+    download(sqls.cateSql, 'fxb-cates.sql');
+    download(sqls.questionSql, 'fxb-questions.sql');
+    // download(sqls.questionCateSql, 'fxb-question-cates.sql');
+    // download(sqls.files, 'fxb-files.csv');
 
     return sqls;
 }
 
-function newgen () {
-    newsql().then((sqls) => {
-        window.sqls = sqls;
-        downloadSqls(sqls, 'new');
+function loadAndRun () {
+    return Promise.all([
+        fetch('/data/driver.fxb-team.com-categories.json').then(r => r.json()),
+        fetch('/data/driver.fxb-team.com-questions.json').then(r => r.json())
+    ]).then(([cates, qs]) => {
+        return downloadSql(cates, qs);
+    }).then((data) => {
+        window.data = data;
     });
 }
 
-interface TTargetCategory {
-    id: string;
-    model: 'cart' | 'mtc';
-    subject: string;
-    title: string;
-}
-
-interface TCategoryMap {
-    [key: string]: string;
-}
-
-function mapCategories (categories: TCategory[]) {
-
-    let map: TCategoryMap = {};
-
-    categories.forEach((cate) => {
-
-    });
-}
+window.loadAndRun = loadAndRun;
 
 return spider;
 
 }());
+
