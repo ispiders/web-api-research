@@ -109,32 +109,6 @@ function main () {
     spider.run();
 }
 
-function filename (url) {
-    return url.split('/').pop();
-}
-
-function sourcePath (url, withHost = false) {
-
-    if (url.slice(0,4) === 'http') {
-
-        if (withHost) {
-            return url;
-        }
-
-        let parts = url.split('/');
-
-        return '/' + parts.slice(3).join('/');
-    }
-    else {
-        if (withHost) {
-            console.log('no host', url);
-            return 'https://sth5.liehuu.com' + url;
-        }
-
-        return url;
-    }
-}
-
 main();
 
 interface TCategory {
@@ -172,94 +146,87 @@ interface TQuestion {
     category_id: string;
 }
 
+function options (opts) {
+    return Object.keys(opts).sort().map((key) => {
+        return opts[key].value.trim();
+    });
+}
+
+function answers (options, answer) {
+    return answer.map((key) => {
+        return options['ABCD'.indexOf(key)];
+    });
+}
+
+function cateId (model: string, subject: string, id: string) {
+    return [model, subject, id].join('-');
+}
+
+function licenceModel (licence) {
+    return {
+        '(C1C2C3)': 'cart',
+        '(A1A3B1)': 'bus',
+        '(A2B2)': 'truck',
+        '(DEF)': 'mtc'
+    }[licence];
+}
+
+function cateSubject (catetype: number, subject: number) {
+    if (catetype === 1) {
+        return 'k' + subject;
+    }
+    else if (catetype === 2 || catetype === 3) {
+        return 'k' + subject + '_' + catetype;
+    }
+    else {
+        console.error('catetype error:', catetype);
+    }
+}
+
+function cateType (typeText) {
+    return {
+        '顺序练习': 1,
+        '精选必考题': 2,
+        '分类练习': 3
+    }[typeText];
+}
+
+function replaceMark (text: string) {
+
+    if (!text) {
+        return text;
+    }
+
+    return text.replace(/<([a-z]+)>(.*?)<\/\1>/ig, (match, match1, match2) => {
+        console.log('replaceMark', match2);
+        return '{' + match2 + '}';
+    });
+}
+
+function attchementPath (uri, prefix = '') {
+
+    if (uri) {
+        let url = new URL(uri);
+        let path = url.pathname + url.search;
+
+        return prefix ? prefix + path : path;
+    }
+
+    return uri;
+}
+
+let typeMap = {
+    1: 1, // 判断
+    0: 2, // 单选
+    2: 3 // 多选
+};
+
+let subjectMap = {
+    1: 'k1',
+    2: 'k4'
+};
+
 function prepareData (categories: TCategory[], qs: TQuestion[]) {
-
-    function options (opts) {
-        return Object.keys(opts).sort().map((key) => {
-            return opts[key].value.trim();
-        });
-    }
-
-    function answers (options, answer) {
-        return answer.map((key) => {
-            return options['ABCD'.indexOf(key)];
-        });
-    }
-
-    function cateId (model: string, subject: string, id: string) {
-        return [model, subject, id].join('-');
-    }
-
-    function licenceModel (licence) {
-        return {
-            '(C1C2C3)': 'cart',
-            '(A1A3B1)': 'bus',
-            '(A2B2)': 'truck',
-            '(DEF)': 'mtc'
-        }[licence];
-    }
-
-    function cateSubject (catetype: number, subject: number) {
-        if (catetype === 1) {
-            return 'k' + subject;
-        }
-        else if (catetype === 2 || catetype === 3) {
-            return 'k' + subject + '_' + catetype;
-        }
-        else {
-            console.error('catetype error:', catetype);
-        }
-    }
-
-    function cateType (typeText) {
-        return {
-            '顺序练习': 1,
-            '精选必考题': 2,
-            '分类练习': 3
-        }[typeText];
-    }
-
-    function replaceMark (text: string) {
-
-        if (!text) {
-            return text;
-        }
-
-        return text.replace(/<([a-z]+)>(.*?)<\/\1>/ig, (match, match1, match2) => {
-            console.log('replaceMark', match2);
-            return '{' + match2 + '}';
-        });
-    }
-
-    function attchementPath (uri, prefix = '') {
-
-        if (uri) {
-            let url = new URL(uri);
-            let path = url.pathname + url.search;
-
-            return prefix ? prefix + path : path;
-        }
-
-        return uri;
-    }
-
-    let typeMap = {
-        1: 1, // 判断
-        0: 2, // 单选
-        2: 3 // 多选
-    };
-
-    let modelMap = {
-        'x': 'cart',
-        'k': 'bus',
-        'h': 'truck',
-        'm': 'mtc'
-    };
-
-    let subjectMap = {
-        1: 'k1',
-        2: 'k4'
-    };
 
     let cateIdMap = {};
     let cateUid = 1000;
@@ -322,7 +289,7 @@ function prepareData (categories: TCategory[], qs: TQuestion[]) {
                 opts: opts.join('-'),
                 image: attchementPath(q.thumb, '/attachment/fxb'),
                 explain_gif: attchementPath(q.skill_thumb, '/attachment/fxb'),
-                explain_js: q.explain,
+                explain_js: q.explain.trim(),
                 explain_jq: '',
                 explain_mp3: attchementPath(q.skill_voice, '/attachment/fxb'),
                 question_mp3: attchementPath(q.broadcast_voice, '/attachment/fxb'),
@@ -398,9 +365,81 @@ function downloadSql (cates, qs) {
 function loadAndRun () {
     return Promise.all([
         fetch('/data/driver.fxb-team.com-categories.json').then(r => r.json()),
-        fetch('/data/driver.fxb-team.com-questions.json').then(r => r.json())
-    ]).then(([cates, qs]) => {
+        fetch('/data/driver.fxb-team.com-questions.json').then(r => r.json()),
+        fetch('/data/fxb-free-questions-1.json').then(r => r.json()),
+        fetch('/data/fxb-free-questions-4.json').then(r => r.json()),
+    ]).then(([cates, qs, free1, free4]) => {
         return downloadSql(cates, qs);
+    }).then((data) => {
+        window.data = data;
+    });
+}
+
+function downloadFreeSql (free1, free4) {
+
+    let uniQid = 1;
+
+    let qs1 = free1.map((q) => {
+        let qid = uniQid++;
+        let type = typeMap[q.type];
+        let opts = options(q.options);
+        let answer = answers(opts, q.answer);
+
+        let question = {
+            id: qid,
+            type: type,
+            issue: q.title.trim(),
+            answer: answer.join('-'),
+            opts: opts.join('-'),
+            image: attchementPath(q.thumb, '/attachment/fxb'),
+            explain_gif: attchementPath(q.skill_thumb, '/attachment/fxb'),
+            explain_js: q.explain.trim(),
+            explain_jq: '',
+            explain_mp3: attchementPath(q.skill_voice, '/attachment/fxb'),
+            question_mp3: attchementPath(q.broadcast_voice, '/attachment/fxb'),
+            model: 'cart',
+            subject: 'k1'
+        };
+
+        return question;
+    });
+
+    let qs4= free4.map((q) => {
+        let qid = uniQid++;
+        let type = typeMap[q.type];
+        let opts = options(q.options);
+        let answer = answers(opts, q.answer);
+
+        let question = {
+            id: qid,
+            type: type,
+            issue: q.title.trim(),
+            answer: answer.join('-'),
+            opts: opts.join('-'),
+            image: attchementPath(q.thumb, '/attachment/fxb'),
+            explain_gif: attchementPath(q.skill_thumb, '/attachment/fxb'),
+            explain_js: q.explain.trim(),
+            explain_jq: '',
+            explain_mp3: attchementPath(q.skill_voice, '/attachment/fxb'),
+            question_mp3: attchementPath(q.broadcast_voice, '/attachment/fxb'),
+            model: 'cart',
+            subject: 'k4'
+        };
+
+        return question;
+    });
+
+    let sql = generateInsertSql('ims_quickpass_drivingtest_freequestions', [...qs1, ...qs4], {maxRow: 100});
+
+    download(sql, 'fxb-free-questions.sql');
+}
+
+function loadAndRunFree () {
+    return Promise.all([
+        fetch('/data/fxb-free-questions-1.json').then(r => r.json()),
+        fetch('/data/fxb-free-questions-4.json').then(r => r.json()),
+    ]).then(([free1, free4]) => {
+        return downloadFreeSql(free1, free4);
     }).then((data) => {
         window.data = data;
     });
