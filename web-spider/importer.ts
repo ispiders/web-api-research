@@ -1,3 +1,24 @@
+function unique<T> (arr: T[], key?: string): T[] {
+
+    let map = new Map();
+
+    return arr.reduce((ret, item) => {
+
+        let index = item;
+
+        if (typeof key !== 'undefined') {
+            index = item[key];
+        }
+
+        if (!map.get(index)) {
+            map.set(index, true);
+            ret.push(item);
+        }
+
+        return ret;
+    }, [] as T[]);
+}
+
 interface TGenerateOptions {
     maxRow?: number;
     autoId?: number;
@@ -51,10 +72,11 @@ function generateInsertSql (tableName: string, data: any[], options: TGenerateOp
                 return Number(value);
             }
             else if (type === 'string') {
-                return '\'' + value.replace(/[\\\']/g, (match) => '\\' + match) + '\'';
+                // return '\'' + value.replace(/[\\\']/g, (match) => '\\' + match).replace(/\n/g, '\\n') + '\'';
+                return JSON.stringify(value);
             }
             else if (type === 'undefined') {
-                return null;
+                return JSON.stringify('');
             }
             else {
                 console.log('insert value error', type, value);

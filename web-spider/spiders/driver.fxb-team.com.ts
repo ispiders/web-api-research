@@ -268,6 +268,32 @@ function prepareData (categories: TCategory[], qs: TQuestion[]) {
         let cate: TCategory = cateMap[cid];
         let catetype = cateType(cate.type);
 
+        let shouldBeJudge = opts.length === 2 && opts[0] === '正确';
+        let shouldBeSingle = answer.length === 1;
+        let shouldBeMulti = answer.length > 1;
+
+        if (shouldBeJudge) {
+            if (type !== 1) {
+                console.log('判断题类型错误', type, opts, answer);
+                type = shouldBeSingle ? 2 : 3;
+            }
+        }
+        else if (shouldBeSingle) {
+            if (type !== 2) {
+                console.log('单选题类型错误', type, opts, answer);
+                type = 2;
+            }
+        }
+        else if (shouldBeMulti) {
+            if (type !== 3) {
+                console.log('多选题类型错误', type, opts, answer);
+                type = shouldBeJudge ? 1 : 3;
+            }
+        }
+        else {
+            console.error('题目错误', q);
+        }
+
         let question = questionMap[q.id];
 
         if (question) {
@@ -289,7 +315,7 @@ function prepareData (categories: TCategory[], qs: TQuestion[]) {
                 opts: opts.join('-'),
                 image: attchementPath(q.thumb, '/attachment/fxb'),
                 explain_gif: attchementPath(q.skill_thumb, '/attachment/fxb'),
-                explain_js: q.explain.trim(),
+                explain_js: q.explain ? q.explain.trim() : '',
                 explain_jq: '',
                 explain_mp3: attchementPath(q.skill_voice, '/attachment/fxb'),
                 question_mp3: attchementPath(q.broadcast_voice, '/attachment/fxb'),
@@ -393,7 +419,7 @@ function downloadFreeSql (free1, free4) {
             opts: opts.join('-'),
             image: attchementPath(q.thumb, '/attachment/fxb'),
             explain_gif: attchementPath(q.skill_thumb, '/attachment/fxb'),
-            explain_js: q.explain.trim(),
+            explain_js: q.explain ? q.explain.trim() : '',
             explain_jq: '',
             explain_mp3: attchementPath(q.skill_voice, '/attachment/fxb'),
             question_mp3: attchementPath(q.broadcast_voice, '/attachment/fxb'),
@@ -418,7 +444,7 @@ function downloadFreeSql (free1, free4) {
             opts: opts.join('-'),
             image: attchementPath(q.thumb, '/attachment/fxb'),
             explain_gif: attchementPath(q.skill_thumb, '/attachment/fxb'),
-            explain_js: q.explain.trim(),
+            explain_js: q.explain ? q.explain.trim() : '',
             explain_jq: '',
             explain_mp3: attchementPath(q.skill_voice, '/attachment/fxb'),
             question_mp3: attchementPath(q.broadcast_voice, '/attachment/fxb'),

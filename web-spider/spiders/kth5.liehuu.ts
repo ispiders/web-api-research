@@ -40,7 +40,8 @@ function main () {
                 category.index = index;
             });
 
-            if (task.data.subject.indexOf('_') === -1) {
+            // if (task.data.subject.indexOf('_') === -1) { // 顺序练习，包含了分类和精选
+            if (task.data.subject.indexOf('_4') !== -1) { // 地方题库不在顺序练习内
                 response.data.forEach((category, index) => {
 
                     spider.addTask(

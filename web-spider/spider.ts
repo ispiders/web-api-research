@@ -257,15 +257,21 @@ class Spider<S extends {}> {
     rules: Rule[];
     tasks: Task[];
     state: S;
+    retryMap: {[index: string]: number;};
+    failedIndexes: number[];
+
     index: number = 0;
     interval: number = 500;
     paused: boolean = false;
     cache: boolean = false;
+    maxRetry: number = 3;
 
     constructor (state: S) {
         this.rules = [];
         this.tasks = [];
         this.state = state;
+        this.failedIndexes = [];
+        this.retryMap = {};
 
         this.preventUnload();
     }
@@ -294,6 +300,12 @@ class Spider<S extends {}> {
             options: options,
             data: data,
             encoding: encoding
+        });
+    }
+
+    hasTask (url: string): boolean {
+        return !!this.tasks.find((item) => {
+            return item.url === url;
         });
     }
 
@@ -407,9 +419,7 @@ class Spider<S extends {}> {
             }, (err) => {
 
                 if (!this.paused) {
-                    setTimeout(() => {
-                        this.run();
-                    }, this.interval * 10);
+                    this.retry();
                 }
 
                 return Promise.reject(err);
@@ -433,6 +443,24 @@ class Spider<S extends {}> {
         }
         else if (!hasNext) {
             this.finished();
+        }
+    }
+
+    retry () {
+
+        let count = this.retryMap[this.index] || 0;
+
+        count = this.retryMap[this.index] = count + 1;
+
+        if (count <= this.maxRetry) {
+
+            setTimeout(() => {
+                this.run();
+            }, this.interval * 10);
+        }
+        else {
+            this.failedIndexes.push(this.index);
+            this.runNext();
         }
     }
 
