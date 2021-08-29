@@ -60,25 +60,34 @@ interface TArea {
     myorder: number;
 }
 
+let globalPhoneNumber = '0512-67542676';
+
 let areaMap = {
-    '吴江': 1,
-    '姑苏': 2,
-    '吴中': 3,
-    '相城': 4,
-    '金阊': 5,
-    '工业园区': 6,
-    '工业园': 7,
-    '平江': 8,
-    '沧浪': 9,
-    '高新区': 10,
-    '虎丘': 11,
-    '常熟': 12,
-    '张家港': 13
+    "吴江": 100,
+    "姑苏": 101,
+    "吴中": 102,
+    "相城": 103,
+    "金阊": 104,
+    "工业园区": 105,
+    "工业园": 106,
+    "平江": 107,
+    "沧浪": 108,
+    "高新区": 109,
+    "虎丘": 110,
+    "常熟": 111,
+    "张家港": 112
 };
+
+function trimParams (url: string) {
+    if (url) {
+        return url.replace(/\?.*$/, '');
+    }
+
+    return ''
+}
 
 function prepareXiaoquData (xiaoqus: {getDetail: TXiaoqu}[]) {
 
-    let xiaoquIdMap = {};
     let areaMap = {};
     let areaUid = 100;
     let areaData: TArea[] = [];
@@ -86,7 +95,6 @@ function prepareXiaoquData (xiaoqus: {getDetail: TXiaoqu}[]) {
     let xiaoquData =  xiaoqus.map(({getDetail}, index) => {
 
         let xiaoqu = getDetail;
-        let id = xiaoquIdMap[xiaoqu.id] = index + 1;
         let areaName = xiaoqu.areaName;
         let areaId = areaMap[areaName] || '';
 
@@ -102,7 +110,7 @@ function prepareXiaoquData (xiaoqus: {getDetail: TXiaoqu}[]) {
         }
 
         let data: TTargetXiaoqu = {
-            id: id,
+            id: xiaoqu.communityId,
             create_time: Math.floor(Date.now() / 1000),
             update_time: Math.floor(Date.now() / 1000),
             user_id: 0,
@@ -116,7 +124,7 @@ function prepareXiaoquData (xiaoqus: {getDetail: TXiaoqu}[]) {
             onclick: 0,
             lng: xiaoqu.xAxis,
             lat: xiaoqu.yAxis,
-            pic: xiaoqu.homePage
+            pic: trimParams(xiaoqu.homePage)
         };
 
         return data;
@@ -239,6 +247,25 @@ function prepareNewsCateData (cates: TNewsCate[]) {
     return data;
 }
 
+function trimLinks (html: string) {
+    let el = document.createElement('div');
+
+    el.innerHTML = html;
+    let links = [...el.querySelectorAll<HTMLAnchorElement>('a[href]')];
+
+    links.forEach((a) => {
+        let textNode = document.createTextNode(a.innerText);
+        let parentElement = a.parentElement;
+
+        if (parentElement) {
+            parentElement.insertBefore(textNode, a);
+            parentElement.removeChild(a);
+        }
+    });
+
+    return el.innerHTML;
+}
+
 function prepareNewsData (news: TNews[]) {
 
     let data = news.map((item) => {
@@ -251,7 +278,7 @@ function prepareNewsData (news: TNews[]) {
             admin_id: 20,
             title: item.title,
             is_toped: 0,
-            text: item.content,
+            text: trimLinks(item.content),
             pic: item.imagePath,
             level: 0,
             build_id: 0,
@@ -555,7 +582,7 @@ interface TTargetLoupan {
 
 function timestamp (date: string) {
 
-    return Math.floor(new Date(date).getTime() / 1000);
+    return date ? Math.floor(new Date(date).getTime() / 1000) : 0;
 }
 
 function prepareLoupanData (loupans: TLoupan[]) {
@@ -619,7 +646,7 @@ function prepareLoupanData (loupans: TLoupan[]) {
                     name: layout.fileList[0].name, // text NOT NULL,
                     size: '', // text NOT NULL,
                     type: '', // text NOT NULL,
-                    url: layout.fileList[0].url, // text NOT NULL,
+                    url: trimParams(layout.fileList[0].url), // text NOT NULL,
                     ges: '', // text NOT NULL COMMENT '格式',
                     shi: Number(layout.room) || 0, // tinyint(4) NOT NULL,
                     tin: Number(layout.board) || 0, // tinyint(4) NOT NULL,
@@ -646,7 +673,7 @@ function prepareLoupanData (loupans: TLoupan[]) {
                         name: '', // text NOT NULL,
                         size: '', // text NOT NULL,
                         type: '', // text NOT NULL,
-                        url: image.src, // text NOT NULL,
+                        url: trimParams(image.src), // text NOT NULL,
                         ges: '', // text NOT NULL COMMENT '格式',
                         shi: 0, // tinyint(4) NOT NULL,
                         tin: 0, // tinyint(4) NOT NULL,
@@ -682,7 +709,7 @@ function prepareLoupanData (loupans: TLoupan[]) {
                         name: '', // text NOT NULL,
                         size: '', // text NOT NULL,
                         type: '', // text NOT NULL,
-                        url: image.src, // text NOT NULL,
+                        url: trimParams(image.src), // text NOT NULL,
                         ges: '', // text NOT NULL COMMENT '格式',
                         shi: 0, // tinyint(4) NOT NULL,
                         tin: 0, // tinyint(4) NOT NULL,
@@ -764,7 +791,7 @@ function prepareLoupanData (loupans: TLoupan[]) {
             lies: loupan.projectRemarkJson.weaknesses, // varchar(255) NOT NULL COMMENT '劣势',
             sell_address: loupan.detailedAddress, // varchar(255) NOT NULL COMMENT '售楼地址',
             call_code: '', // varchar(255) NOT NULL COMMENT '手机代号',
-            call: '0512-67542676', // varchar(255) NOT NULL COMMENT '联系电话',
+            call: globalPhoneNumber, // varchar(255) NOT NULL COMMENT '联系电话',
             touzs: '', // varchar(255) NOT NULL COMMENT '投资商',
             xukz: loupan.residentialQuarters.advanceSaleNo, // varchar(255) NOT NULL COMMENT '许可证',
             time_kp: loupan.marketTime ? loupan.marketTime.split('T')[0] : '', // text NOT NULL COMMENT '开盘时间',
@@ -801,7 +828,7 @@ function prepareLoupanData (loupans: TLoupan[]) {
             is_top: '', // varchar(255) NOT NULL COMMENT '置顶',
             is_good: '', // varchar(255) NOT NULL COMMENT '推荐',
             re_time: 0, // int(11) NOT NULL COMMENT '刷新时间',
-            pic: loupan.homePage, // varchar(255) NOT NULL COMMENT '封面图片',
+            pic: trimParams(loupan.homePage), // varchar(255) NOT NULL COMMENT '封面图片',
             point: '', // varchar(255) NOT NULL,
             lng: loupan.xAxis, // text NOT NULL COMMENT '经度',
             lat: loupan.yAxis, // text NOT NULL COMMENT '纬度',
@@ -845,8 +872,518 @@ function generateLoupanSql (doDownload = false) {
     });
 }
 
-// generateXiaoquSql(true);
+interface TErshoufang {
+    id: string; // "p_SH811956913377583104740";
+    title: string; // "苏州樾府 出售 135m² 4室2厅2卫 精装";
+    alias: string[]; // [];
+    houseStatus: string; // "有效";
+    isParking: string; // "有";
+    parkingExplain: string; // "买的车位有发票";
+    floorType: string; // "中层";
+    floorTotal: number; // 6;
+    homePage: string; // "https://cdn1.xunkyz.com/tocConsul/Cardioid/20210218132157821_667091.png?x-oss-process=style/small-yuanhaowang-com";
+    rentTimeCondition: string; // "";
+    rentType: string; // "";
+    payRequire: string; // "";
+    rentalPriceSum: string; // null;
+    houseSituationId: string; // "有匙";
+    rentRemarks: string; // null;
+    cityCode: string; // "320500";
+    cityName: string; // "苏州";
+    cityFirstLetters: string; // "su";
+    areaCode: string; // "320506";
+    areaFirstLetters: string; // "wuzhongqu";
+    areaName: string; // "吴中";
+    businessCode: string; // "659125";
+    businessName: string; // "木渎";
+    businessFirstLetters: string; // "muduzhen";
+    domain: string; // null;
+    isFollow: string; // "0";
+    availablePriceSum: number; // 375;
+    availablePriceSumAvg: number; // 27778;
+    originDomain: string; // "";
+    houseArea: number; // 135;
+    shelvesTime: string; // "2021-08-25T15:30:02";
+    houseIntroduce: string; // null;
+    label: string[]; // [];
+    houseOrientationType: string; // "东南";
+    photoImage: TPhotoImage[]; //
+    entrustDate: string; // "2021-02-18T13:46:53";
+    mortgageSituation: string; // "";
+    secondPropertyType: string[]; // string[];
+    remarks: string; // string;
+    hasElevator: string; // "无";
+    liftNum: number; // 2;
+    unitHouseholdNum: number; // 24;
+    residentialQuartersId: string; // "RD811943228445761536448";
+    renovationType: string; // "精装";
+    renovationTypeKv: string; // "KV60177994217842278456";
+    roomLayoutInfo: {"room": string; "livingRoom": string; "toilet": string; }; //
+    transactionType: string; // "出售";
+    collectCount: string; // null;
+    platformCount: string; // null;
+    residentialQuartersPhonetic: string; // "suzhouyuefu";
+    attribution: string; // [];
+    xAxis: string; // "120.50707087055099";
+    yAxis: string; // "31.29275916177798";
+    residentialQuarters: TResidentialQuarters; // ;
+    roomLayout: string; // "4室2厅2卫;
+}
+
+interface TTargetInfo {
+    id: number; // int(10) unsigned NOT NULL AUTO_INCREMENT,
+    create_time?: number; // int(11) DEFAULT NULL,
+    update_time?: number; // int(11) DEFAULT NULL,
+    user_id?: number; // int(11) DEFAULT NULL,
+    admin_id?: number; // int(11) DEFAULT NULL,
+    status?: number; // tinyint(4) NOT NULL DEFAULT 0,
+    title?: string; // varchar(255) NOT NULL DEFAULT ' ',
+    myorder?: number; // int(11) NOT NULL DEFAULT 0,
+    isvideo: string; // varchar(255) NOT NULL,
+    info_level: string; // varchar(255) NOT NULL COMMENT '2 精选',
+    zhongjie: string; // varchar(255) NOT NULL,
+    type: number; // tinyint(4) NOT NULL COMMENT '1 二手 2租房  4求购',
+    phone: string; // varchar(255) NOT NULL COMMENT '联系方式',
+    user_type: number; // tinyint(4) NOT NULL COMMENT '发布者类型',
+    name: string; // varchar(255) NOT NULL,
+    is_top: number; // tinyint(1) NOT NULL,
+    area_id: number; // int(11) NOT NULL,
+    ip: string; // varchar(255) NOT NULL,
+    cate_id: number; // int(11) NOT NULL COMMENT 'cate_id',
+    plot_id: number; // int(11) NOT NULL COMMENT '小区id',
+    address: string; // varchar(255) NOT NULL COMMENT '地址',
+    shi: number; // tinyint(2) NOT NULL COMMENT '室',
+    tin: number; // tinyint(2) NOT NULL COMMENT '厅',
+    wei: number; // tinyint(2) NOT NULL COMMENT '卫',
+    floor: string; // varchar(255) NOT NULL COMMENT '楼',
+    floors: string; // varchar(255) NOT NULL COMMENT '总楼层',
+    chaox?: string; // varchar(255) DEFAULT NULL COMMENT '朝向',
+    faci: string; // varchar(255) NOT NULL COMMENT '设备',
+    price: number; // int(11) NOT NULL COMMENT '价格',
+    peit: string; // varchar(255) NOT NULL COMMENT '配套',
+    place: string; // varchar(255) NOT NULL COMMENT '面积',
+    youxq?: string; // varchar(255) DEFAULT NULL,
+    text: string; // varchar(255) NOT NULL,
+    video?: string; // varchar(255) DEFAULT NULL,
+    is_sale?: number; // tinyint(1) NOT NULL DEFAULT 1 COMMENT '上下架',
+    tags: string; // varchar(255) NOT NULL,
+    finish: string; // varchar(255) NOT NULL COMMENT '装修',
+    re_time: number; // int(12) NOT NULL,
+    onclick: number; // int(11) NOT NULL,
+    is_toped: string; // varchar(255) NOT NULL,
+    is_good: string; // varchar(255) NOT NULL,
+    top_time: number; // int(11) NOT NULL COMMENT '置顶到期时间',
+    re_num: number; // int(11) NOT NULL COMMENT '刷新次数',
+    pic: string; // varchar(255) NOT NULL,
+    is_red: number; // tinyint(1) NOT NULL,
+    is_bold?: number; // tinyint(1) DEFAULT NULL,
+    point: string; // varchar(255) NOT NULL,
+    lng: string; // text NOT NULL,
+    lat: string; // text NOT NULL,
+}
+
+let infoUid = 10000;
+let infoTagUid = 200;
+let infoTagMap: {[type: string]: number;} = {};
+
+function prepareErshoufangData (ershoufangs: TErshoufang[]) {
+
+    let ershoufangData: TTargetInfo[] = [];
+
+    //
+    let infoTagData: {id: number; title: string;}[] = [];
+
+    //
+    let fileData: TTargetFile[] = [];
+    let fileUid = 200000;
+
+    ershoufangs.forEach((ershou) => {
+
+        let infoId = infoUid++;
+
+        // build_cate
+        let typeIds: number[] = [];
+
+        ershou.residentialQuarters.propertyType.forEach((type) => {
+            let id = infoTagMap[type];
+
+            if (!id) {
+                id = infoTagUid++;
+                infoTagMap[type] = id;
+                infoTagData.push({
+                    id: id,
+                    title: type
+                });
+            }
+
+            typeIds.push(id);
+        });
+
+        ershou.residentialQuarters.buildHeight.forEach((type) => {
+            let id = infoTagMap[type];
+
+            if (!id) {
+                id = infoTagUid++;
+                infoTagMap[type] = id;
+                infoTagData.push({
+                    id: id,
+                    title: type
+                });
+            }
+
+            typeIds.push(id);
+        });
+
+        ershou.photoImage.forEach((photo) => {
+            if (photo.name === '视频') {
+
+            }
+            else {
+                photo.imageInfo.forEach((image) => {
+                    fileData.push({
+                        id: fileUid++,
+                        table_name: 'info', // text NOT NULL,
+                        data_id: infoId,
+                        basename: '', // text NOT NULL,
+                        extension: '', // text NOT NULL,
+                        field: '', // text NOT NULL,
+                        filename: '', // text NOT NULL,
+                        name: '', // text NOT NULL,
+                        size: '', // text NOT NULL,
+                        type: '', // text NOT NULL,
+                        url: trimParams(image.src), // text NOT NULL,
+                        ges: '', // text NOT NULL COMMENT '格式',
+                        shi: 0, // tinyint(4) NOT NULL,
+                        tin: 0, // tinyint(4) NOT NULL,
+                        wei: 0, // tinyint(4) NOT NULL,
+                        place: 0, // int(10) NOT NULL,
+                        sell_id: 0, // int(11) NOT NULL,
+                        is_face: 0, // tinyint(1) NOT NULL COMMENT '是否封面',
+                        chaox: '', // varchar(255) NOT NULL,
+                    });
+                });
+            }
+        });
+
+        let data: TTargetInfo = {
+            id: infoId, // int(10) unsigned NOT NULL AUTO_INCREMENT,
+            create_time: timestamp(ershou.shelvesTime), // int(11) DEFAULT NULL,
+            update_time: timestamp(ershou.shelvesTime), // int(11) DEFAULT NULL,
+            user_id: 0, // int(11) DEFAULT NULL,
+            admin_id: 0, // int(11) DEFAULT NULL,
+            status: 1, // tinyint(4) NOT NULL DEFAULT 0,
+            title: ershou.title, // varchar(255) NOT NULL DEFAULT ' ',
+            // myorder: 0, // int(11) NOT NULL DEFAULT 0,
+            isvideo: '', // varchar(255) NOT NULL,
+            info_level: '', // varchar(255) NOT NULL COMMENT '2 精选',
+            zhongjie: '', // varchar(255) NOT NULL,
+            type: 1, // tinyint(4) NOT NULL COMMENT '1 二手 2租房  4求购',
+            phone: globalPhoneNumber, // varchar(255) NOT NULL COMMENT '联系方式',
+            user_type: 0, // tinyint(4) NOT NULL COMMENT '发布者类型',
+            name: '', // varchar(255) NOT NULL,
+            is_top: 0, // tinyint(1) NOT NULL,
+            area_id: areaMap[ershou.areaName] || 0, // int(11) NOT NULL,
+            ip: '', // varchar(255) NOT NULL,
+            cate_id: 0, // int(11) NOT NULL COMMENT 'cate_id',
+            plot_id: ershou.residentialQuarters.communityId, // int(11) NOT NULL COMMENT '小区id',
+            address: ershou.residentialQuarters.detailedAddress, // varchar(255) NOT NULL COMMENT '地址',
+            shi: Number(ershou.roomLayoutInfo.room) || 0, // tinyint(2) NOT NULL COMMENT '室',
+            tin: Number(ershou.roomLayoutInfo.livingRoom) || 0, // tinyint(2) NOT NULL COMMENT '厅',
+            wei: Number(ershou.roomLayoutInfo.toilet) || 0, // tinyint(2) NOT NULL COMMENT '卫',
+            floor: ershou.floorType, // varchar(255) NOT NULL COMMENT '楼',
+            floors: String(ershou.floorTotal), // varchar(255) NOT NULL COMMENT '总楼层',
+            chaox: ershou.houseOrientationType, // varchar(255) DEFAULT NULL COMMENT '朝向',
+            faci: '', // varchar(255) NOT NULL COMMENT '设备',
+            price: ershou.availablePriceSum, // int(11) NOT NULL COMMENT '价格',
+            peit: '', // varchar(255) NOT NULL COMMENT '配套',
+            place: ershou.houseArea + '㎡', // varchar(255) NOT NULL COMMENT '面积',
+            // youxq: '', // varchar(255) DEFAULT NULL,
+            text: ershou.remarks, // varchar(255) NOT NULL,
+            video: '', // varchar(255) DEFAULT NULL,
+            // is_sale: 1, // tinyint(1) NOT NULL DEFAULT 1 COMMENT '上下架',
+            tags: typeIds.join(','), // varchar(255) NOT NULL,
+            finish: ershou.renovationType, // varchar(255) NOT NULL COMMENT '装修',
+            re_time: 0, // int(12) NOT NULL,
+            onclick: 0, // int(11) NOT NULL,
+            is_toped: '', // varchar(255) NOT NULL,
+            is_good: '', // varchar(255) NOT NULL,
+            top_time: 0, // int(11) NOT NULL COMMENT '置顶到期时间',
+            re_num: 0, // int(11) NOT NULL COMMENT '刷新次数',
+            pic: trimParams(ershou.homePage), // varchar(255) NOT NULL,
+            is_red: 0, // tinyint(1) NOT NULL,
+            // is_bold: 0, // tinyint(1) DEFAULT NULL,
+            point: '', // varchar(255) NOT NULL,
+            lng: ershou.xAxis, // text NOT NULL,
+            lat: ershou.yAxis, // text NOT NULL,
+        };
+
+        ershoufangData.push(data);
+    });
+
+    return {
+        ershoufangData,
+        infoTagData,
+        fileData
+    };
+}
+
+interface TZufang {
+    id: string; // "p_F0193304",
+    title: string; // "招商依云华苑 出租 110m² 3室2厅1卫 精装",
+    alias: string[]; // string[],
+    houseStatus: string; // "有效",
+    isParking: string; // "无",
+    parkingExplain: string; // null,
+    floorType: string; // "",
+    floorTotal: number; // 27,
+    homePage: string; // "https://cdn3.xunkyz.com/110-7fa9-47af-abdc-884ec583509a.jpg?x-oss-process=style/small-yuanhaowang-com",
+    rentTimeCondition: string; // "",
+    rentType: string; // "",
+    payRequire: string; // "",
+    rentalPriceSum: number; // null,
+    houseSituationId: string; // "",
+    rentRemarks: string; // null,
+    cityCode: string; // "320500",
+    cityName: string; // "苏州",
+    cityFirstLetters: string; // "su",
+    areaCode: string; // "320507",
+    areaFirstLetters: string; // "xiangchengquxiangchengqu2",
+    areaName: string; // "相城",
+    businessCode: string; // "659102",
+    businessName: string; // "元和",
+    businessFirstLetters: string; // "yuanhejiedaoyuanhejiedao2",
+    domain: string; // "www.yuanhaowang.com",
+    isFollow: string; // "0",
+    availablePriceSum: string; // "",
+    availablePriceSumAvg: string; // 0,
+    houseArea: number; // 110,
+    shelvesTime: string; // "2020-01-02T14:23:33",
+    houseIntroduce: string; // null,
+    label: string[]; // [],
+    houseOrientationType: string; // null,
+    photoImage: TPhotoImage[]; // TPhotoImage[],
+    entrustDate: string; // "2018-06-30T00:00:00",
+    mortgageSituation: string; // "",
+    secondPropertyType: string[]; // string[],
+    remarks: string; // "",
+    hasElevator: string; // "无",
+    liftNum: number; // 2,
+    unitHouseholdNum: number; // 216,
+    residentialQuartersId: string; // "RD636595916916129792446",
+    renovationType: string; // "精装",
+    renovationTypeKv: string; // "KV60177994217842278456",
+    roomLayoutInfo: {toilet: number; livingRoom: number; room: number; }; // {"toilet": number; "livingRoom": number; "room": number; },
+    transactionType: string; // "出租",
+    collectCount: string; // null,
+    platformCount: string; // null,
+    residentialQuartersPhonetic: string; // "zhaoshangyiyunhuayuan",
+    attribution: string[]; // [],
+    xAxis: string; // "120.605786",
+    yAxis: string; // "31.397251",
+    residentialQuarters: TResidentialQuarters; // TResidentialQuarters,
+    roomLayout: string; // "3室2厅1卫",
+}
+
+function prepareZufangData (zufangs: TZufang[]) {
+
+    let zufangData: TTargetInfo[] = [];
+
+    //
+    let infoTagData: {id: number; title: string;}[] = [];//
+    let fileData: TTargetFile[] = [];
+    let fileUid = 500000;
+
+    zufangs.forEach((zufang) => {
+
+        let infoId = infoUid++;
+
+        // build_cate
+        let typeIds: number[] = [];
+
+        zufang.residentialQuarters.propertyType.forEach((type) => {
+            let id = infoTagMap[type];
+
+            if (!id) {
+                id = infoTagUid++;
+                infoTagMap[type] = id;
+                infoTagData.push({
+                    id: id,
+                    title: type
+                });
+            }
+
+            typeIds.push(id);
+        });
+
+        zufang.residentialQuarters.buildHeight.forEach((type) => {
+            let id = infoTagMap[type];
+
+            if (!id) {
+                id = infoTagUid++;
+                infoTagMap[type] = id;
+                infoTagData.push({
+                    id: id,
+                    title: type
+                });
+            }
+
+            typeIds.push(id);
+        });
+
+        zufang.photoImage.forEach((photo) => {
+            if (photo.name === '视频') {
+
+            }
+            else {
+                photo.imageInfo.forEach((image) => {
+                    fileData.push({
+                        id: fileUid++,
+                        table_name: 'info', // text NOT NULL,
+                        data_id: infoId,
+                        basename: '', // text NOT NULL,
+                        extension: '', // text NOT NULL,
+                        field: '', // text NOT NULL,
+                        filename: '', // text NOT NULL,
+                        name: '', // text NOT NULL,
+                        size: '', // text NOT NULL,
+                        type: '', // text NOT NULL,
+                        url: trimParams(image.src), // text NOT NULL,
+                        ges: '', // text NOT NULL COMMENT '格式',
+                        shi: 0, // tinyint(4) NOT NULL,
+                        tin: 0, // tinyint(4) NOT NULL,
+                        wei: 0, // tinyint(4) NOT NULL,
+                        place: 0, // int(10) NOT NULL,
+                        sell_id: 0, // int(11) NOT NULL,
+                        is_face: 0, // tinyint(1) NOT NULL COMMENT '是否封面',
+                        chaox: '', // varchar(255) NOT NULL,
+                    });
+                });
+            }
+        });
+
+        let data: TTargetInfo = {
+            id: infoId, // int(10) unsigned NOT NULL AUTO_INCREMENT,
+            create_time: timestamp(zufang.shelvesTime), // int(11) DEFAULT NULL,
+            update_time: timestamp(zufang.shelvesTime), // int(11) DEFAULT NULL,
+            user_id: 0, // int(11) DEFAULT NULL,
+            admin_id: 0, // int(11) DEFAULT NULL,
+            status: 1, // tinyint(4) NOT NULL DEFAULT 0,
+            title: zufang.title, // varchar(255) NOT NULL DEFAULT ' ',
+            // myorder: 0, // int(11) NOT NULL DEFAULT 0,
+            isvideo: '', // varchar(255) NOT NULL,
+            info_level: '', // varchar(255) NOT NULL COMMENT '2 精选',
+            zhongjie: '', // varchar(255) NOT NULL,
+            type: 2, // tinyint(4) NOT NULL COMMENT '1 二手 2租房  4求购',
+            phone: globalPhoneNumber, // varchar(255) NOT NULL COMMENT '联系方式',
+            user_type: 0, // tinyint(4) NOT NULL COMMENT '发布者类型',
+            name: '', // varchar(255) NOT NULL,
+            is_top: 0, // tinyint(1) NOT NULL,
+            area_id: areaMap[zufang.areaName] || 0, // int(11) NOT NULL,
+            ip: '', // varchar(255) NOT NULL,
+            cate_id: 0, // int(11) NOT NULL COMMENT 'cate_id',
+            plot_id: zufang.residentialQuarters.communityId, // int(11) NOT NULL COMMENT '小区id',
+            address: zufang.residentialQuarters.detailedAddress, // varchar(255) NOT NULL COMMENT '地址',
+            shi: Number(zufang.roomLayoutInfo.room) || 0, // tinyint(2) NOT NULL COMMENT '室',
+            tin: Number(zufang.roomLayoutInfo.livingRoom) || 0, // tinyint(2) NOT NULL COMMENT '厅',
+            wei: Number(zufang.roomLayoutInfo.toilet) || 0, // tinyint(2) NOT NULL COMMENT '卫',
+            floor: zufang.floorType, // varchar(255) NOT NULL COMMENT '楼',
+            floors: String(zufang.floorTotal), // varchar(255) NOT NULL COMMENT '总楼层',
+            chaox: zufang.houseOrientationType, // varchar(255) DEFAULT NULL COMMENT '朝向',
+            faci: '', // varchar(255) NOT NULL COMMENT '设备',
+            price: zufang.rentalPriceSum || 0, // int(11) NOT NULL COMMENT '价格',
+            peit: '', // varchar(255) NOT NULL COMMENT '配套',
+            place: zufang.houseArea + '㎡', // varchar(255) NOT NULL COMMENT '面积',
+            // youxq: '', // varchar(255) DEFAULT NULL,
+            text: zufang.remarks, // varchar(255) NOT NULL,
+            video: '', // varchar(255) DEFAULT NULL,
+            // is_sale: 1, // tinyint(1) NOT NULL DEFAULT 1 COMMENT '上下架',
+            tags: typeIds.join(','), // varchar(255) NOT NULL,
+            finish: zufang.renovationType, // varchar(255) NOT NULL COMMENT '装修',
+            re_time: 0, // int(12) NOT NULL,
+            onclick: 0, // int(11) NOT NULL,
+            is_toped: '', // varchar(255) NOT NULL,
+            is_good: '', // varchar(255) NOT NULL,
+            top_time: 0, // int(11) NOT NULL COMMENT '置顶到期时间',
+            re_num: 0, // int(11) NOT NULL COMMENT '刷新次数',
+            pic: trimParams(zufang.homePage), // varchar(255) NOT NULL,
+            is_red: 0, // tinyint(1) NOT NULL,
+            // is_bold: 0, // tinyint(1) DEFAULT NULL,
+            point: '', // varchar(255) NOT NULL,
+            lng: zufang.xAxis, // text NOT NULL,
+            lat: zufang.yAxis, // text NOT NULL,
+        };
+
+        zufangData.push(data);
+    });
+
+    return {
+        zufangData,
+        infoTagData,
+        fileData
+    };
+}
+
+function generateErshoufangSql (doDownload = false) {
+
+    return Promise.all([
+        fetch('/data/yuanhaowang-ershoufangs-1.json').then(r => r.json()),
+        fetch('/data/yuanhaowang-ershoufangs-2.json').then(r => r.json())
+    ]).then(([ershoufangs1, ershoufangs2]) => {
+
+        let ershoufangs = ershoufangs1.concat(ershoufangs2);
+        let {ershoufangData, infoTagData, fileData} = prepareErshoufangData(ershoufangs.map((item) => item.getDetail));
+
+        let ershouSql = generateInsertSql('cqz_info', ershoufangData, {maxRow: 100});
+        let tagsSql = generateInsertSql('cqz_info_tag', infoTagData, {maxRow: 100});
+        let fileSql = generateInsertSql('cqz_file', fileData, {maxRow: 100});
+
+        if (doDownload) {
+            download(ershouSql, 'yuanhaowang-to-efangmv-ershoufangs.sql');
+            download(tagsSql, 'yuanhaowang-to-efangmv-ershoufangs-tags.sql');
+            download(fileSql, 'yuanhaowang-to-efangmv-ershoufangs-files.sql');
+        }
+
+        return {
+            ershouSql,
+            tagsSql,
+            fileSql
+        };
+    });
+}
+
+function generateZufangSql (doDownload = false) {
+
+    return Promise.all([
+        fetch('/data/yuanhaowang-zufangs.json').then(r => r.json())
+    ]).then(([zufangs]) => {
+
+        let {zufangData, infoTagData, fileData} = prepareZufangData(zufangs.map((item) => item.getDetail));
+
+        let zufangSql = generateInsertSql('cqz_info', zufangData, {maxRow: 100});
+        let tagsSql = generateInsertSql('cqz_info_tag', infoTagData, {maxRow: 100});
+        let fileSql = generateInsertSql('cqz_file', fileData, {maxRow: 100});
+
+        if (doDownload) {
+            download(zufangSql, 'yuanhaowang-to-efangmv-zufangs.sql');
+            download(tagsSql, 'yuanhaowang-to-efangmv-zufangs-tags.sql');
+            download(fileSql, 'yuanhaowang-to-efangmv-zufangs-files.sql');
+        }
+
+        return {
+            zufangSql,
+            tagsSql,
+            fileSql
+        };
+    });
+}
+
+//
+
+generateXiaoquSql(true);
 
 // generateNewsSql(true);
 
-generateLoupanSql(true);
+// generateLoupanSql(true);
+
+// generateErshoufangSql(true);
+// generateZufangSql(true);
