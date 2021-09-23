@@ -40,12 +40,23 @@ let spider = new Spider({
 
 function main () {
 
-    let lang = 'hayu';
+    let lang = 'weiyu';
     let models = ['x', 'k', 'h', 'm'];
     let subjects = [1, 2];
 
     models.forEach((model) => {
         subjects.forEach((subject) => {
+
+            // 临时筛选
+            if (model === 'x') {
+                return;
+            }
+            if (model === 'h' || model === 'k') {
+                if (subject === 2) {
+                    return;
+                }
+            }
+
             spider.addTask(`http://ks.jkjdt.com/index/catelist.html?cate=ca`, {}, {
                 catelist: true,
                 cate: {
@@ -74,7 +85,7 @@ function main () {
             lists.forEach((el) => {
                 let titleEl = el.querySelector<HTMLDivElement>('.ls_text');
                 let linkEl = el.querySelector<HTMLAnchorElement>('.ls_but a');
-                let name = titleEl && titleEl.innerText.trim();
+                let name = titleEl && titleEl.innerText.trim() || '';
                 let link = linkEl && linkEl.href;
 
                 if (!link) {
@@ -95,6 +106,11 @@ function main () {
                     link: link,
                     ...task.data.cate
                 };
+
+                // 临时筛选
+                if (['k', 'h'].indexOf(task.data.cate.model) !== -1 && name.indexOf('专用') === -1) {
+                    return;
+                }
 
                 spider.state.categories.push(category);
 
@@ -183,226 +199,6 @@ function sourcePath (url, withHost = false) {
 }
 
 main();
-
-function prepareData (categories: TCategory[], qs: TQuestion[]) {
-
-    function cateId (cate) {
-        return [cate.model, cate.subject, cate.id].join('-');
-    }
-
-    function replaceMark (text: string) {
-
-        if (!text) {
-            return text;
-        }
-
-        return text.replace(/<([a-z]+)>(.*?)<\/\1>/ig, (match, match1, match2) => {
-            console.log('replaceMark', match2);
-            return '{' + match2 + '}';
-        });
-    }
-
-    function attchementPath (filePath) {
-        if (filePath) {
-            return '/uploads/hayu/' + filePath;
-        }
-
-        return filePath;
-    }
-
-    let typeMap = {
-        1: 1,
-        0: 2,
-        2: 3
-    };
-
-    let modelMap = {
-        'x': 'cart',
-        'k': 'bus',
-        'h': 'truck',
-        'm': 'mtc'
-    };
-
-    let subjectMap = {
-        1: 'k1',
-        2: 'k4'
-    };
-
-    let cateMap = {};
-    let cateUid = 1000;
-    let cates: any[] = [];
-
-    let questionMap = {};
-    let questionUid = 100000;
-    let questions: any[] = [];
-
-    let questionCateRelationUid = 100000;
-    let questionCateRelations: any[] = [];
-
-    let fileURL = 'http://file.jkjdt.com/' + 'hayu/';
-
-    categories.forEach((cate) => {
-        let id = cateId(cate);
-        let cid = cateUid++;
-
-        cateMap[id] = cid;
-
-        cates.push({
-            id: cid,
-            title: cate.name.replace(/^\d+\.(?:科目(?:一|四))?|\s*\(\d+题\)$/g, ''),
-            model: modelMap[cate.model],
-            subject: subjectMap[cate.subject],
-            lang: cate.lang,
-            status: 1
-        });
-
-        cate.ids.forEach((qid) => {
-
-            let questionId = questionMap[qid];
-
-            if (!questionId) {
-                questionId = questionMap[qid] = questionUid++;
-            }
-
-            questionCateRelations.push({
-                id: questionCateRelationUid++,
-                qid: questionId,
-                cid: cid
-            });
-        });
-    });
-
-    let filesMap = {};
-
-    qs.forEach((q) => {
-        let type = typeMap[q.tmtype];
-        let answer = type === 1 ? (q.answer == '2' ? 0 : 1) : Number(q.answer) >> 2;
-        let options = type === 1 ? '' : JSON.stringify([
-            {option: replaceMark(q.A), correct: Boolean(answer & 1)},
-            {option: replaceMark(q.B), correct: Boolean(answer & 2)},
-            {option: replaceMark(q.C), correct: Boolean(answer & 4)},
-            {option: replaceMark(q.D), correct: Boolean(answer & 8)},
-        ]);
-
-        let image = '';
-        let gif = '';
-        let js_mp3 = '';
-        let jq_mp3 = '';
-        let title_mp3 = 'readtm/' + q.m_id + '.mp3';
-
-        if (q.c_jximg) {
-            gif = q.c_jximg.indexOf('gif') > 0 ? 'jximg/' + q.m_id + '.gif' : '';
-        }
-
-        // 中文
-        // if (q.image) {
-        //     image = 'tmimg/' + q.image.replace('.swf', '.gif');
-        // }
-        // js_mp3 = 'sounda/' + q.m_id + '.mp3';
-        // jq_mp3 = 'soundb/' + q.m_id + '.mp3';
-
-
-        // 哈维
-        if (q.imgtype !== 'none') {
-            if (q.imgtype.indexOf('jpg') > 0) {
-                image = 'tmimg/' + q.m_id + '.gif';
-            }
-            else {
-                image = 'tmimg/' + q.m_id + '.jpg';
-            }
-        }
-        jq_mp3 = 'sound/' + q.m_id + '.mp3'
-
-
-        if (type === 1 && ([0,1].indexOf(answer) === -1)) {
-            console.error('判断题答案问题', answer, q);
-        }
-        else if (type === 2 && (answer & (answer - 1))) {
-            console.error('单选题答案问题', answer, q);
-        }
-        else if (type === 3 && (answer < 1 || answer > 15 || !(answer & (answer - 1)))) {
-            console.error('多选题答案问题', answer, q);
-        }
-
-        questions.push({
-            id: questionMap[q.id],
-            type: type,
-            title: replaceMark(q.title),
-            answer: answer,
-            opts: options,
-            image: attchementPath(image),
-            explain_gif: attchementPath(gif),
-            explain_js: replaceMark(q.c_jiexia || ''),
-            explain_js_mp3: attchementPath(js_mp3),
-            explain_jq: replaceMark(q.c_jiexib || ''),
-            explain_mp3: attchementPath(jq_mp3),
-            question_mp3: attchementPath(title_mp3),
-        });
-
-        if (image) {
-            filesMap[image] = 1;
-        }
-
-        if (gif) {
-            filesMap[gif] = 1;
-        }
-
-        if (js_mp3) {
-            filesMap[js_mp3] = 1;
-        }
-
-        if (jq_mp3) {
-            filesMap[jq_mp3] = 1;
-        }
-
-        if (title_mp3) {
-            filesMap[title_mp3] = 1;
-        }
-    });
-
-    return {
-        cates,
-        questions,
-        questionCateRelations,
-        files: Object.keys(filesMap).map(path => fileURL + path)
-    };
-}
-
-function generateSql (cates, qs) {
-
-    let data = prepareData(cates, qs);
-
-    return {
-        cateSql: generateInsertSql('eb_training_category', data.cates, {maxRow: 100}),
-        questionSql: generateInsertSql('eb_training_question', data.questions, {maxRow: 100}),
-        questionCateSql: generateInsertSql('eb_training_question_cates', data.questionCateRelations, {maxRow: 100}),
-        files: data.files.join('\n')
-    };
-}
-
-function downloadSql (cates, qs) {
-    let sqls = generateSql(cates, qs);
-
-    window.downloadData = sqls;
-
-    download(sqls.cateSql, 'jkjdt-cates.sql');
-    download(sqls.questionSql, 'jkjdt-questions.sql');
-    download(sqls.questionCateSql, 'jkjdt-question-cates.sql');
-    download(sqls.files, 'jkjdt-files.csv');
-
-    return sqls;
-}
-
-function loadAndRun () {
-    return Promise.all([
-        fetch('/data/jkjdt-categories.json').then(r => r.json()),
-        fetch('/data/jkjdt-questions.json').then(r => r.json())
-    ]).then(([cates, qs]) => {
-        return downloadSql(cates, qs);
-    }).then((data) => {
-        window.data = data;
-    });
-}
 
 return spider;
 
