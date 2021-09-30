@@ -193,7 +193,7 @@ spider.addRule({
             });
 
             // 如果下一页的链接地址跟下一个任务的链接地址不一样，可能是章节被分页
-            if (nextLink && nextLink !== nextTaskUrl) {
+            if (nextLink && nextLink !== nextTaskUrl && !spider.tasks.find((item) => {return item.url === nextLink})) {
                 spider.insertAfterTask(task, nextLink, {}, {
                     encoding: task.data.encoding,
                     title: task.data.title,

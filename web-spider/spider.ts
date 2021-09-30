@@ -1,4 +1,4 @@
-function diff (arr1, arr2) {
+function diff (arr1, arr2, reverse = false) {
 
     let map = arr1.reduce((m, item) => {
 
@@ -13,8 +13,15 @@ function diff (arr1, arr2) {
 
     arr2.forEach((item) => {
 
-        if (!map.has(item)) {
-            diffArr.push(item);
+        if (reverse) {
+            if (map.has(item)) {
+                diffArr.push(item);
+            }
+        }
+        else {
+            if (!map.has(item)) {
+                diffArr.push(item);
+            }
         }
     });
 
@@ -145,7 +152,7 @@ function readBlobDocument (blob: Blob, encoding: string = 'utf-8'): Promise<HTML
 
 function getEncoding (doc: HTMLDocument) {
 
-    let charsetMeta = doc.querySelector('meta[charset]');
+    let charsetMeta = [...doc.querySelectorAll('meta[charset]')].pop();
     let charset = 'utf-8';
 
     if (charsetMeta) {
@@ -163,7 +170,6 @@ function getEncoding (doc: HTMLDocument) {
 
             if (equiv === 'content-type') {
                 contentType = el.getAttribute('content') || '';
-                break;
             }
         }
 
