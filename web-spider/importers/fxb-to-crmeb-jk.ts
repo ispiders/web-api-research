@@ -129,6 +129,7 @@ function prepareData (categories: TCategory[], qs: TQuestion[]) {
 
     let questionCateRelationUid = 500000;
     let questionCateRelations: any[] = [];
+    let questionCateRelationsUniqueMap: {[key: string]: 1} = {};
 
     let cateMap = {};
 
@@ -172,6 +173,7 @@ function prepareData (categories: TCategory[], qs: TQuestion[]) {
         let shouldBeJudge = opts.length === 2 && opts[0].option === '正确';
         let shouldBeSingle = ((answer - 1) & answer) === 0;
         let shouldBeMulti = ((answer - 1) & answer) !== 0;
+        let relationUniqueKey = `${qid}-${cid}`;
 
         if (shouldBeJudge) {
             if (type !== 1) {
@@ -221,13 +223,19 @@ function prepareData (categories: TCategory[], qs: TQuestion[]) {
                 qid: qid,
                 cid: cid
             });
+            questionCateRelationsUniqueMap[relationUniqueKey] = 1;
         }
         else {
-            questionCateRelations.push({
-                id: questionCateRelationUid++,
-                qid: questionMap[q.id],
-                cid: cid
-            });
+            let realQid = questionMap[q.id];
+            relationUniqueKey = `${realQid}-${cid}`;
+            if (!questionCateRelationsUniqueMap[relationUniqueKey]) {
+                questionCateRelations.push({
+                    id: questionCateRelationUid++,
+                    qid: questionMap[q.id],
+                    cid: cid
+                });
+                questionCateRelationsUniqueMap[relationUniqueKey] = 1;
+            }
         }
     });
 
