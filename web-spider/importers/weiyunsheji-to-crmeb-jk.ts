@@ -105,20 +105,20 @@ function realColumnId (columnId) {
     }
 }
 
-function prepareData (categories: TCategory[], qs: TQuestion[]) {
+function prepareData (categories: TCategory[], qs: TQuestion[], startId = 8000) {
 
     // 此题库小车题库也适用于货车客车
     let commonCartQuestion = true;
 
     let cateIdMap = {};
-    let cateUid = 8000;
+    let cateUid = startId;
     let cates: any[] = [];
 
     let questionMap = {};
-    let questionUid = 800000;
+    let questionUid = startId * 100;
     let questions: any[] = [];
 
-    let questionCateRelationUid = 800000;
+    let questionCateRelationUid = startId * 100;
     let questionCateRelations: any[] = [];
     let questionCateRelationsUniqueMap: {[key: string]: 1} = {};
 
@@ -264,9 +264,9 @@ function prepareData (categories: TCategory[], qs: TQuestion[]) {
     };
 }
 
-function generateSql (cates, qs) {
+function generateSql (cates, qs, startId = 8000) {
 
-    let data = prepareData(cates, qs);
+    let data = prepareData(cates, qs, startId);
 
     return {
         cateSql: generateInsertSql('eb_training_category', data.cates, {maxRow: 100}),
@@ -275,8 +275,8 @@ function generateSql (cates, qs) {
     };
 }
 
-function downloadSql (cates, qs) {
-    let sqls = generateSql(cates, qs);
+function downloadSqlKth5 (cates, qs) {
+    let sqls = generateSql(cates, qs, 8000);
 
     download(sqls.cateSql, 'weiyunsheji-to-crmeb-cates.sql');
     download(sqls.questionSql, 'weiyunsheji-to-crmeb-questions.sql');
@@ -285,12 +285,33 @@ function downloadSql (cates, qs) {
     return sqls;
 }
 
-function loadAndRun () {
+function loadAndRunKth5 () {
     return Promise.all([
-        fetch('/data/weiyunsheji-v1-categories.json').then(r => r.json()),
-        fetch('/data/weiyunsheji-v1-questions.json').then(r => r.json())
+        fetch('/data/kth5/weiyunsheji-v1-categories.json').then(r => r.json()),
+        fetch('/data/kth5/weiyunsheji-v1-questions.json').then(r => r.json())
     ]).then(([cates, qs]) => {
-        return downloadSql(cates, qs);
+        return downloadSqlKth5(cates, qs);
+    }).then((data) => {
+        window.data = data;
+    });
+}
+
+function downloadSqlSth5 (cates, qs) {
+    let sqls = generateSql(cates, qs, 9000);
+
+    download(sqls.cateSql, 'sth5-to-crmeb-cates.sql');
+    download(sqls.questionSql, 'sth5-to-crmeb-questions.sql');
+    download(sqls.questionCateSql, 'sth5-to-crmeb-question-cates.sql');
+
+    return sqls;
+}
+
+function loadAndRunSth5 () {
+    return Promise.all([
+        fetch('/data/sth5/sth5-cates.json').then(r => r.json()),
+        fetch('/data/sth5/sth5-questions-with-baidu-text-audio.json').then(r => r.json())
+    ]).then(([cates, qs]) => {
+        return downloadSqlSth5(cates, qs);
     }).then((data) => {
         window.data = data;
     });
