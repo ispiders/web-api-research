@@ -105,7 +105,36 @@ function realColumnId (columnId) {
     }
 }
 
-function prepareData (categories: TCategory[], qs: TQuestion[], startId = 8000) {
+// 题目难度定级
+function rating (type, failedCount) {
+    let base = 40;
+
+    if (type === 2) {
+        base = 60;
+    }
+    else if (type === 3) {
+        base = 80;
+    }
+
+    if (failedCount > 100) {
+        base += 20;
+    }
+    else if (failedCount > 10) {
+        base += 10;
+    }
+    else {
+        base += 5;
+    }
+
+    return base;
+}
+
+function prepareData (categories: TCategory[], qs: TQuestion[], startId = 8000, failedCounts = []) {
+
+    let failedCountMap = failedCounts.reduce((map, item) => {
+        map[item.questionId] = item.c;
+        return map;
+    }, {});
 
     // 此题库小车题库也适用于货车客车
     let commonCartQuestion = true;
@@ -178,7 +207,7 @@ function prepareData (categories: TCategory[], qs: TQuestion[], startId = 8000) 
 
             return ans;
         }, 0);
-        let type = q.type;
+        let type = Number(q.type);
         let qid = questionUid++;
         let shouldBeJudge = opts.length === 2;
         let shouldBeSingle = ((answer - 1) & answer) === 0;
@@ -218,8 +247,12 @@ function prepareData (categories: TCategory[], qs: TQuestion[], startId = 8000) 
             explain_jq: q.explain_jq,
             explain_mp3: attchementPath(q.explain_mp3, '/uploads'),
             question_mp3: attchementPath(q.question_mp3, '/uploads'),
-            explain_js_mp3: attchementPath(q.explain_js_mp3, '/uploads'),
+            explain_js_mp3: attchementPath(q.explain_js_mp3, '/uploads')
         };
+
+        if (failedCounts.length) {
+            question.rating = rating(type, failedCounts[q.id]);
+        }
 
         questionMap[q.id] = qid;
         questions.push(question);
@@ -264,9 +297,9 @@ function prepareData (categories: TCategory[], qs: TQuestion[], startId = 8000) 
     };
 }
 
-function generateSql (cates, qs, startId = 8000) {
+function generateSql (cates, qs, startId = 8000, failedCounts) {
 
-    let data = prepareData(cates, qs, startId);
+    let data = prepareData(cates, qs, startId, failedCounts);
 
     return {
         cateSql: generateInsertSql('eb_training_category', data.cates, {maxRow: 100}),
@@ -296,8 +329,8 @@ function loadAndRunKth5 () {
     });
 }
 
-function downloadSqlSth5 (cates, qs) {
-    let sqls = generateSql(cates, qs, 9000);
+function downloadSqlSth5 (cates, qs, failedCounts) {
+    let sqls = generateSql(cates, qs, 9000, failedCounts);
 
     download(sqls.cateSql, 'sth5-to-crmeb-cates.sql');
     download(sqls.questionSql, 'sth5-to-crmeb-questions.sql');
@@ -309,9 +342,10 @@ function downloadSqlSth5 (cates, qs) {
 function loadAndRunSth5 () {
     return Promise.all([
         fetch('/data/sth5/sth5-cates.json').then(r => r.json()),
-        fetch('/data/sth5/sth5-questions-with-baidu-text-audio.json').then(r => r.json())
-    ]).then(([cates, qs]) => {
-        return downloadSqlSth5(cates, qs);
+        fetch('/data/sth5/sth5-questions-with-baidu-text-audio.json').then(r => r.json()),
+        fetch('/data/sth5/jiakao-hao105-failed-count.json').then(r => r.json())
+    ]).then(([cates, qs, failedCounts]) => {
+        return downloadSqlSth5(cates, qs, failedCounts);
     }).then((data) => {
         window.data = data;
     });

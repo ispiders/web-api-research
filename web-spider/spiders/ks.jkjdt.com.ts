@@ -48,14 +48,14 @@ function main () {
         subjects.forEach((subject) => {
 
             // 临时筛选
-            if (model === 'x') {
-                return;
-            }
-            if (model === 'h' || model === 'k') {
-                if (subject === 2) {
-                    return;
-                }
-            }
+            // if (model === 'x') {
+            //     return;
+            // }
+            // if (model === 'h' || model === 'k') {
+            //     if (subject === 2) {
+            //         return;
+            //     }
+            // }
 
             spider.addTask(`http://ks.jkjdt.com/index/catelist.html?cate=ca`, {}, {
                 catelist: true,
@@ -108,9 +108,9 @@ function main () {
                 };
 
                 // 临时筛选
-                if (['k', 'h'].indexOf(task.data.cate.model) !== -1 && name.indexOf('专用') === -1) {
-                    return;
-                }
+                // if (['k', 'h'].indexOf(task.data.cate.model) !== -1 && name.indexOf('专用') === -1) {
+                //     return;
+                // }
 
                 spider.state.categories.push(category);
 

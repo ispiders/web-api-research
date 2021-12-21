@@ -232,18 +232,18 @@ function downloadSql (cates, qs) {
 
     window.downloadData = sqls;
 
-    download(sqls.cateSql, 'jkjdt-weiyu-cates.sql');
-    download(sqls.questionSql, 'jkjdt-weiyu-questions.sql');
-    download(sqls.questionCateSql, 'jkjdt-weiyu-question-cates.sql');
-    download(sqls.files, 'jkjdt-weiyu-files.csv');
+    download(sqls.cateSql, 'ks-jkjdt-weiyu-cates.sql');
+    download(sqls.questionSql, 'ks-jkjdt-weiyu-questions.sql');
+    download(sqls.questionCateSql, 'ks-jkjdt-weiyu-question-cates.sql');
+    download(sqls.files, 'ks-jkjdt-weiyu-files.csv');
 
     return sqls;
 }
 
 function loadAndRun () {
     return Promise.all([
-        fetch('/data/jkjdt-weiyu-categories.json').then(r => r.json()),
-        fetch('/data/jkjdt-weiyu-questions.json').then(r => r.json())
+        fetch('/data/jkjdt/ks-jkjdt-weiyu-cates.json').then(r => r.json()),
+        fetch('/data/jkjdt/ks-jkjdt-weiyu-questions.json').then(r => r.json())
     ]).then(([cates, qs]) => {
         return downloadSql(cates, qs);
     }).then((data) => {
