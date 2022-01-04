@@ -148,8 +148,6 @@ function generateSql (cates, qs) {
 function downloadSql (cates, qs) {
     let sqls = generateSql(cates, qs);
 
-    window.downloadData = sqls;
-
     download(sqls.cateSql, 'kth5-to-lulutong-cates.sql');
     download(sqls.questionSql, 'kth5-to-lulutong-questions.sql');
 
@@ -158,11 +156,9 @@ function downloadSql (cates, qs) {
 
 function loadAndRun () {
     return Promise.all([
-        fetch('/data/kth5.liehuu-categories-1.json').then(r => r.json()),
-        fetch('/data/kth5.liehuu-questions-1.json').then(r => r.json())
+        fetch('/data/kth5/kth5.liehuu-cates.json').then(r => r.json()),
+        fetch('/data/kth5/kth5.liehuu-questions.json').then(r => r.json())
     ]).then(([cates, qs]) => {
         return downloadSql(cates, qs);
-    }).then((data) => {
-        window.data = data;
     });
 }

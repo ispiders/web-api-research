@@ -2,6 +2,8 @@ spider = new Spider({});
 
 function main () {
 
+    // 直接访问以下地址
+    // https://kth5.liehuu.com/h5/pages/skill/required?columnZh=%E5%88%86%E7%B1%BB%E7%BB%83%E4%B9%A0&model=cart&subject=k1_3
     let host = 'https://app.kuaitongjiakao.com';
     let models = ['cart', 'bus', 'truck', 'mtc'];
     let subjects = ['k1', 'k4'];
@@ -41,7 +43,7 @@ function main () {
             });
 
             // if (task.data.subject.indexOf('_') === -1) { // 顺序练习，包含了分类和精选
-            if (task.data.subject.indexOf('_4') !== -1) { // 地方题库不在顺序练习内
+            // if (task.data.subject.indexOf('_4') !== -1) { // 地方题库不在顺序练习内
                 response.data.forEach((category, index) => {
 
                     spider.addTask(
@@ -54,7 +56,7 @@ function main () {
                         }
                     );
                 });
-            }
+            // }
         }
     });
 
@@ -77,86 +79,6 @@ function main () {
     };
 
     spider.run();
-}
-
-function filename (url) {
-    return url.split('/').pop();
-}
-
-function generateSql () {
-
-    let cateid = 120;
-    let categorySql = 'delete from ims_quickpass_drivingtest_category where model="mtc";\n';
-    let cateMap = {};
-
-    categorySql += `insert into ims_quickpass_drivingtest_category (id, model, subject, title, icon, sort) values \n`;
-
-    categorySql += spider.state.categories.map((category) => {
-
-        let cid = cateid++;
-
-        cateMap[1000 + category.id] = cid + 1000;
-
-        return '(' + [
-            cid,
-            JSON.stringify(category.model),
-            JSON.stringify(category.subject),
-            JSON.stringify(category.title),
-            JSON.stringify(`/addons/drivingtest_lulutong/style/mobile/icon/card${category.index + 1}.png`),
-            category.index
-        ].join(',') + ')';
-    }).join(',\n') + ';\n';
-
-    let questionSql = `delete from ims_quickpass_drivingtest_questions where model="mtc";\ninsert into ims_quickpass_drivingtest_questions (id, model, subject, column_id, column_id2, column_id3, column_id4, number, type, issue, image, opts, answer, highlight, explain_gif, explain_mp3, free) values \n`;
-    let images = [];
-    let audios = [];
-
-    let questions = spider.state.questions.sort((a, b) => a.id - b.id);
-
-    questionSql += questions.map((question) => {
-
-        question.imageUrl = '';
-        question.imageYdtUrl = '';
-        question.explainMp3Url = '';
-
-        if (question.image) {
-            images.push(question.image);
-            question.imageUrl = '/attachment/images/mtc/' + filename(question.image);
-        }
-        if (question.imageYdt) {
-            images.push(question.imageYdt);
-            question.imageYdtUrl = '/attachment/images/mtc/' + filename(question.imageYdt);
-        }
-        if (question.explainMp3) {
-            audios.push(question.explainMp3);
-            question.explainMp3Url = '/attachment/audios/mtc/' + filename(question.explainMp3);
-        }
-
-        return '(' + [
-            question.id,
-            JSON.stringify(question.model),
-            JSON.stringify(question.subject),
-            cateMap[question.columnId] || 0,
-            cateMap[question.columnId2] || 0,
-            cateMap[question.columnId3] || 0,
-            cateMap[question.columnId4] || 0,
-            1, // 排序
-            question.type,
-            JSON.stringify(question.issue),
-            JSON.stringify(question.imageUrl),
-            JSON.stringify(question.opts),
-            JSON.stringify(question.answer),
-            JSON.stringify(question.titlekeyword),
-            JSON.stringify(question.imageYdtUrl),
-            JSON.stringify(question.explainMp3Url),
-            0
-        ].join(',') + ')';
-    }).join(',\n') + ';\n';
-
-    console.log(images.join('\n'));
-    console.log(audios.join('\n'));
-
-    return categorySql + questionSql;
 }
 
 main();
