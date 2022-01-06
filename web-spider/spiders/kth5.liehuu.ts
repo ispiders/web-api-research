@@ -27,6 +27,20 @@ function main () {
         });
     });
 
+    // 免费题 https://kth5.liehuu.com/h5/pages/question/free?time=88888888
+    subjects.forEach((km) => {
+        spider.addTask(
+            `${host}/question/getFreeQuestions?model=&subject=${km}`,
+            {},
+            {
+                questions: true,
+                free: true,
+                model: 'cart',
+                subject: km
+            }
+        );
+    });
+
     spider.addRule({
         match: function (task) {
             return task.data.category;
@@ -69,13 +83,19 @@ function main () {
 
             let response = parseJSON(text);
 
-            spider.state.questions = spider.state.questions.concat(response.data);
+            if (task.data.free) {
+                spider.state.free = spider.state.free.concat(response.data);
+            }
+            else {
+                spider.state.questions = spider.state.questions.concat(response.data);
+            }
         }
     });
 
     spider.state = {
         categories: [],
-        questions: []
+        questions: [],
+        free: []
     };
 
     spider.run();

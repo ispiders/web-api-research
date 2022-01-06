@@ -105,7 +105,7 @@ function prepareData (categories: TCategory[], qs: TQuestion[]) {
             column_id2: realCateId(q.columnId2),
             column_id3: realCateId(q.columnId3),
             column_id4: realCateId(q.columnId4),
-            id_ydt: q.idYdt,
+            id_ydt: q.idYdt || 0,
             number: q.number,
             type: q.type,
             answer: q.answer,
@@ -122,9 +122,9 @@ function prepareData (categories: TCategory[], qs: TQuestion[]) {
             opts: q.opts,
             skillkeyword: q.skillkeyword,
             titlekeyword: q.titlekeyword,
-            issuemp3: attchementPath(q.issuemp3),
-            answermp3: attchementPath(q.answermp3),
-            explainjsmp3: attchementPath(q.explainjsmp3),
+            question_mp3: attchementPath(q.issuemp3),
+            answer_mp3: attchementPath(q.answermp3),
+            explain_js_mp3: attchementPath(q.explainjsmp3),
             subject: q.subject
         };
     });
