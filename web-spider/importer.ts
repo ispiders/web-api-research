@@ -1,4 +1,8 @@
-function unique<T> (arr: T[], key?: string): T[] {
+interface TUniquePpredicate<T> {
+    (item: T): any;
+}
+
+function unique<T> (arr: T[], key?: string | TUniquePpredicate<T>): T[] {
 
     let map = new Map();
 
@@ -6,8 +10,11 @@ function unique<T> (arr: T[], key?: string): T[] {
 
         let index = item;
 
-        if (typeof key !== 'undefined') {
+        if (typeof key === 'string') {
             index = item[key];
+        }
+        else if (typeof key === 'function') {
+            index = key(item);
         }
 
         if (!map.get(index)) {
@@ -19,9 +26,13 @@ function unique<T> (arr: T[], key?: string): T[] {
     }, [] as T[]);
 }
 
+
+type TSql = 'sql' | 'psql';
+
 interface TGenerateOptions {
     maxRow?: number;
     autoId?: number;
+    sqlType?: TSql;
 }
 
 function generateInsertSql (tableName: string, data: any[], options: TGenerateOptions = {}) {
@@ -48,8 +59,11 @@ function generateInsertSql (tableName: string, data: any[], options: TGenerateOp
         columns.unshift('id');
     }
 
-    let sql = 'insert into `' + tableName + '` ('
-        + columns.map(key => ['`', key, '`'].join('')).join(',')
+    let table = tableName;
+    let quote = options.sqlType === 'psql' ? '"' : '`';
+
+    let sql = 'insert into ' + table + ' ('
+        + columns.map(key => [quote, key, quote].join('')).join(',')
         + ') values \n';
 
     sql += data.map((row, index) => {
@@ -69,11 +83,26 @@ function generateInsertSql (tableName: string, data: any[], options: TGenerateOp
                 return value;
             }
             else if (type === 'boolean') {
+
+                if (options.sqlType === 'psql') {
+                    return String(value);
+                }
+
                 return Number(value);
             }
             else if (type === 'string') {
                 // return '\'' + value.replace(/[\\\']/g, (match) => '\\' + match).replace(/\n/g, '\\n') + '\'';
-                return JSON.stringify(value);
+                let valueStr = JSON.stringify(value);
+
+                if (options.sqlType === 'psql') {
+                    valueStr = valueStr.replace(/'/g, function (match) {
+                        return "''";
+                    }).replace(/^"|"$/g, function (match) {
+                        return "'";
+                    });
+                }
+
+                return valueStr;
             }
             else if (type === 'undefined') {
                 return JSON.stringify('');

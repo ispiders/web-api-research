@@ -28,7 +28,11 @@ function diff (arr1, arr2, reverse = false) {
     return diffArr;
 }
 
-function unique<T> (arr: T[], key?: string): T[] {
+interface TUniquePpredicate<T> {
+    (item: T): any;
+}
+
+function unique<T> (arr: T[], key?: string | TUniquePpredicate<T>): T[] {
 
     let map = new Map();
 
@@ -36,8 +40,11 @@ function unique<T> (arr: T[], key?: string): T[] {
 
         let index = item;
 
-        if (typeof key !== 'undefined') {
+        if (typeof key === 'string') {
             index = item[key];
+        }
+        else if (typeof key === 'function') {
+            index = key(item);
         }
 
         if (!map.get(index)) {

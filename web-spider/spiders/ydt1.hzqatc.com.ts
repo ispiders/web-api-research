@@ -39,6 +39,8 @@ function main () {
         3: 'mtc'
     };
 
+    let uid = 1;
+
     let host = 'http://ydt1.hzqatc.com';
 
     Object.keys(KMs).forEach((km) => {
@@ -83,6 +85,7 @@ function main () {
 
                 if (id) {
                     let category = {
+                        uid: uid++,
                         id: id,
                         name: name,
                         link: link,
@@ -97,16 +100,13 @@ function main () {
                     if (!spider.hasTask(url)) {
                         spider.addTask(url, {}, {
                             questions: true,
+                            uid: category.uid,
                             tid: id
                         });
                     }
                 }
                 else if (name === '地方题库') {
-                    let t = spider.tasks.find((t) => {
-                        return t.url === link;
-                    });
-
-                    if (!t) {
+                    if (!spider.hasTask(link)) {
                         spider.addTask(link, {}, {
                             catelist: true,
                             cate: {
@@ -137,7 +137,9 @@ function main () {
             }
 
             response.rec.forEach((q) => {
-                q.category_id = task.data.tid
+                q.uid = uid++;
+                q.cuid = task.data.uid;
+                q.category_id = task.data.tid;
             });
 
             spider.state.questions = spider.state.questions.concat(response.rec);
@@ -151,12 +153,12 @@ main();
 
 return spider;
 
-function getFiles () {
+function getFiles (questions) {
     let files = [];
     let mediaUrl = "http://mbst.hzqatc.net/exam";
     let ver = Date.now();
 
-    spider.state.questions.forEach((q) => {
+    questions.forEach((q) => {
 
         if (q.sinaimg) {
             files.push(mediaUrl + '/' + q.sinaimg);

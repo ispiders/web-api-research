@@ -156,8 +156,8 @@ function downloadSql (cates, qs) {
 
 function loadAndRun () {
     return Promise.all([
-        fetch('/data/kth5/kth5.liehuu-cates.json').then(r => r.json()),
-        fetch('/data/kth5/kth5.liehuu-questions.json').then(r => r.json())
+        fetch('/data/kth5/kth5.liehuu-cates-2022-03-01.json').then(r => r.json()),
+        fetch('/data/kth5/kth5.liehuu-questions-2022-03-01.json').then(r => r.json())
     ]).then(([cates, qs]) => {
         return downloadSql(cates, qs);
     });
