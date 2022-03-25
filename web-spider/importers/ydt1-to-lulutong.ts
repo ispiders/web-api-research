@@ -168,9 +168,18 @@ function replaceMark (text: string, keywords?: string[]) {
     // });
 }
 
-function attchementPath (uri, prefix = '/public/ydt1/') {
+let missingCount = 0;
+function attchementPath (uri, filenames, prefix = '/public/ydt1/') {
 
     if (uri) {
+        let filename = uri.split('/').pop();
+
+        if (!filenames[filename]) {
+            missingCount++;
+            // console.log('file missing:', uri);
+            return '';
+        }
+
         return prefix + uri;
     }
 
@@ -186,8 +195,8 @@ function attchementPath (uri, prefix = '/public/ydt1/') {
 
 let typeMap = {
     1: 1, // 判断
-    0: 2, // 单选
-    2: 3 // 多选
+    2: 2, // 单选
+    3: 3 // 多选
 };
 
 let subjectMap = {
@@ -205,7 +214,7 @@ function realCateId (columnId) {
     }
 }
 
-function prepareData (categories: TCategory[], qs: TQuestion[]) {
+function prepareData (categories: TCategory[], qs: TQuestion[], filenames) {
 
     let cateUid = 1;
     let cates: TTargetCategory[] = [];
@@ -286,8 +295,13 @@ function prepareData (categories: TCategory[], qs: TQuestion[]) {
         }
 
         if (hasMtc && cate.models.length > 1) {
-            console.error('mtc category error', cate);
-            return 'all';
+            if (cate.type === 4) {
+                return 'cart';
+            }
+            else {
+                console.error('mtc category error', cate);
+                return 'all';
+            }
         }
         else if (hasMtc) {
             return 'mtc';
@@ -313,8 +327,8 @@ function prepareData (categories: TCategory[], qs: TQuestion[]) {
 
     function getSubject (cate) {
         if (cate.subjects.length > 1) {
-            console.log('subject error', cate);
-            return 'k1';
+            console.error('subject error', cate);
+            return 'k4';
         }
         else {
             return cate.subject;
@@ -362,6 +376,7 @@ function prepareData (categories: TCategory[], qs: TQuestion[]) {
 
     let questionUid = 1;
     let questions: TTargetQuestion[] = [];
+    let questionMap = {};
 
     qs.forEach((q) => {
 
@@ -389,6 +404,22 @@ function prepareData (categories: TCategory[], qs: TQuestion[]) {
         let unicate = cateUniMap[cate.id];
         let model = getModel(unicate);
 
+        if (questionMap[q.id]) {
+            if (questionMap[q.id].models.indexOf(cate.model) === -1) {
+                questionMap[q.id].models.push(cate.model);
+                console.log('multi model question', q.id, questionMap[q.id].models);
+            }
+            if (questionMap[q.id].subjects.indexOf(cate.subject) === -1) {
+                questionMap[q.id].subjects.push(cate.subject);
+                console.log('multi subject question', q.id, questionMap[q.id].subjects);
+            }
+        }
+        else {
+            questionMap[q.id] = q;
+            questionMap[q.id].models = [cate.model];
+            questionMap[q.id].subjects = [cate.subject];
+        }
+
         let question = {
             id: qid,
             column_id: 0,
@@ -397,7 +428,7 @@ function prepareData (categories: TCategory[], qs: TQuestion[]) {
             column_id4: 0,
             id_ydt: 0,
             number: 0,
-            type: typeMap[q.type],
+            type: q.type,
             answer: answer,
             model: model === 'all' ? 'cart' : model,
             opts: typeof opts === 'string' ? '√-×' : opts.map(item => item.option).join('-'),
@@ -406,11 +437,11 @@ function prepareData (categories: TCategory[], qs: TQuestion[]) {
             explain_jq: q.voiceEx ? replaceMark(q.voiceEx.trim(), skillKeywords) : '',
             explain_js: q.explain ? replaceMark(q.explain.trim()) : '',
             issue: replaceMark(q.Question, titleKeywords),
-            explain_gif: attchementPath('skill/' + q.id + '.gif'),
-            explain_mp3: attchementPath('mp3/' + q.id + '.mp3'),
-            question_mp3: attchementPath('Qmp3/' + q.id + '.mp3'),
-            explain_js_mp3: attchementPath('Emp3/' + q.id + '.mp3'),
-            image: attchementPath(q.sinaimg),
+            explain_gif: attchementPath('skill/' + q.id + '.gif', filenames),
+            explain_mp3: attchementPath('mp3/' + q.id + '.mp3', filenames),
+            question_mp3: attchementPath('Qmp3/' + q.id + '.mp3', filenames),
+            explain_js_mp3: attchementPath('Emp3/' + q.id + '.mp3', filenames),
+            image: attchementPath(q.sinaimg, filenames),
             keywordcolor: '#ff0000',
             titlekeyword: titleKeywords.join('-'),
             skillkeyword: skillKeywords.join('-'),
@@ -430,6 +461,8 @@ function prepareData (categories: TCategory[], qs: TQuestion[]) {
 
         questions.push(question);
     });
+
+    console.log('missing count: ', missingCount)
 
     return {
         cates,
@@ -474,9 +507,9 @@ function getFiles (questions) {
     return files;
 }
 
-function generateSql (cates, qs) {
+function generateSql (cates, qs, filenames) {
 
-    let data = prepareData(cates, qs);
+    let data = prepareData(cates, qs, filenames);
 
     return {
         cateSql: generateInsertSql('ims_quickpass_drivingtest_category', data.cates, {maxRow: 100}),
@@ -485,8 +518,8 @@ function generateSql (cates, qs) {
     };
 }
 
-function downloadSql (cates, qs) {
-    let sqls = generateSql(cates, qs);
+function downloadSql (cates, qs, filenames) {
+    let sqls = generateSql(cates, qs, filenames);
 
     window.downloadData = sqls;
 
@@ -500,9 +533,16 @@ function downloadSql (cates, qs) {
 function loadAndRun () {
     return Promise.all([
         fetch('/data/ydt1-hzqatc/ydt1-categories.json').then(r => r.json()),
-        fetch('/data/ydt1-hzqatc/ydt1-questions.json').then(r => r.json())
-    ]).then(([cates, qs]) => {
-        return downloadSql(cates, qs);
+        fetch('/data/ydt1-hzqatc/ydt1-questions.json').then(r => r.json()),
+        fetch('/data/ydt1-hzqatc/ydt1-file-names.csv').then(r => r.text())
+        .then(s => s.split('\n')).then((filenames) => {
+            return filenames.reduce((map, name) => {
+                map[name] = 1;
+                return map;
+            }, {});
+        })
+    ]).then(([cates, qs, filenames]) => {
+        return downloadSql(cates, qs, filenames);
     }).then((data) => {
         window.data = data;
     });
