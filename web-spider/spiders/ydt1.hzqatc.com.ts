@@ -21,7 +21,9 @@ spider = (function () {
 
 let spider = new Spider({
     categories: [],
-    questions: []
+    questions: [],
+    free: [],
+    sl: []
 });
 
 function main () {
@@ -67,6 +69,18 @@ function main () {
                 }
             });
         });
+    });
+
+    // 免费试题
+    spider.addTask(`${host}/qaydt/app/exam/rec.ashx?tid=10114`, {}, {
+        questions: true,
+        free: true
+    });
+
+    // 三力测试
+    spider.addTask(`${host}/qaydt/app/exam/rec.ashx?tid=10161`, {}, {
+        questions: true,
+        sl: true
     });
 
     spider.addRule({
@@ -134,6 +148,15 @@ function main () {
 
             if (response.err !== 0) {
                 throw new Error('question api result error:' + text);
+            }
+
+            if (task.data.free) {
+                spider.state.free = spider.state.free.concat(response.rec);
+                return;
+            }
+            else if (task.data.sl) {
+                spider.state.sl = spider.state.sl.concat(response.rec);
+                return;
             }
 
             response.rec.forEach((q) => {

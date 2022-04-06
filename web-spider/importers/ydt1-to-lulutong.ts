@@ -532,9 +532,9 @@ function downloadSql (cates, qs, filenames) {
 
 function loadAndRun () {
     return Promise.all([
-        fetch('/data/ydt1-hzqatc/ydt1-categories.json').then(r => r.json()),
-        fetch('/data/ydt1-hzqatc/ydt1-questions.json').then(r => r.json()),
-        fetch('/data/ydt1-hzqatc/ydt1-file-names.csv').then(r => r.text())
+        fetch('/data/ydt1-hzqatc/ydt1-categories-20220405.json').then(r => r.json()),
+        fetch('/data/ydt1-hzqatc/ydt1-questions-20220405.json').then(r => r.json()),
+        fetch('/data/ydt1-hzqatc/ydt1-file-names-20220405.csv').then(r => r.text())
         .then(s => s.split('\n')).then((filenames) => {
             return filenames.reduce((map, name) => {
                 map[name] = 1;

@@ -40,6 +40,43 @@ interface TQuestion {
     explainjsmp3: string;
 }
 
+interface TTargetCategory {
+    id: number;
+    model: string;
+    subject: string;
+    title: string;
+    icon?: string;
+}
+
+interface TTargetQuestion {
+    id: number;
+    column_id: number;
+    column_id2: number;
+    column_id3: number;
+    column_id4: number;
+    id_ydt?: number;
+    number?: number;
+    type: number;
+    answer: string;
+    answerkeyword?: string;
+    explain_gif: string;
+    explain_jq: string;
+    explain_js: string;
+    explain_mp3: string;
+    image: string;
+    image_ydt?: string;
+    issue: string;
+    keywordcolor?: string;
+    model: string;
+    opts: string;
+    skillkeyword?: string;
+    titlekeyword?: string;
+    question_mp3: string;
+    answer_mp3: string;
+    explain_js_mp3: string;
+    subject: string;
+}
+
 function cateSubject (catetype: number, subject: number) {
     if (catetype === 1) {
         return 'k' + subject;
@@ -79,7 +116,12 @@ function attchementPath (uri, prefix = '/public/kth5/statics') {
 }
 
 function realCateId (columnId) {
-    return columnId || 0;
+    if (columnId) {
+        return columnId > 1000 ? columnId : +columnId + 1000;
+    }
+    else {
+        return 0;
+    }
 }
 
 let typeMap = {
@@ -88,18 +130,45 @@ let typeMap = {
     2: 3 // 多选
 };
 
+// 只导入指定的分类
+let filterCids = [8, 42, 18, 27, 87, 224, 235, 288];
+
 function prepareData (categories: TCategory[], qs: TQuestion[]) {
 
-    let cates = categories.map((c) => {
+    let files: string[] = [];
+
+    let cates = unique(categories, 'id').map((c) => {
         let item = {...c};
+
+        // if (c.icon) {
+        //     files.push(c.icon);
+        // }
 
         delete item.index;
 
         return item;
     });
 
-    let questions = unique(qs, 'id').map((q) => {
-        return {
+    let questions: TTargetQuestion[] = [];
+
+    unique(qs, 'id').forEach((q) => {
+
+        let t = true;
+
+        if (filterCids.length) {
+            t = false;
+            filterCids.forEach((cid) => {
+                if ([q.columnId, q.columnId2, q.columnId3, q.columnId4].indexOf(realCateId(cid)) !== -1) {
+                    t = true;
+                }
+            });
+        }
+
+        if (!t) {
+            return;
+        }
+
+        let question = {
             id: q.id,
             column_id: realCateId(q.columnId),
             column_id2: realCateId(q.columnId2),
@@ -127,21 +196,53 @@ function prepareData (categories: TCategory[], qs: TQuestion[]) {
             explain_js_mp3: attchementPath(q.explainjsmp3),
             subject: q.subject
         };
+        questions.push(question);
+
+        if (q.explainGif) {
+            files.push(q.explainGif);
+        }
+        if (q.explainMp3) {
+            files.push(q.explainMp3);
+        }
+        if (q.image) {
+            files.push(q.image);
+        }
+        if (q.imageYdt) {
+            files.push(q.imageYdt);
+        }
+        if (q.issuemp3) {
+            files.push(q.issuemp3);
+        }
+        if (q.answermp3) {
+            files.push(q.answermp3);
+        }
+        if (q.explainjsmp3) {
+            files.push(q.explainjsmp3);
+        }
     });
 
     return {
         cates,
-        questions
+        questions,
+        files
     };
 }
 
 function generateSql (cates, qs) {
 
-    let data = prepareData(cates, qs);
+    let data = prepareData(cates.filter(cate => {
+        if (filterCids.length) {
+            return filterCids.indexOf(cate.id) !== -1
+        }
+        else {
+            return true;
+        }
+    }), qs);
 
     return {
         cateSql: generateInsertSql('ims_quickpass_drivingtest_category', data.cates, {maxRow: 100}),
-        questionSql: generateInsertSql('ims_quickpass_drivingtest_questions', data.questions, {maxRow: 100})
+        questionSql: generateInsertSql('ims_quickpass_drivingtest_questions', data.questions, {maxRow: 100}),
+        files: data.files.join('\n')
     };
 }
 
@@ -150,14 +251,15 @@ function downloadSql (cates, qs) {
 
     download(sqls.cateSql, 'kth5-to-lulutong-cates.sql');
     download(sqls.questionSql, 'kth5-to-lulutong-questions.sql');
+    download(sqls.files, 'kth5-to-lulutong-files.csv');
 
     return sqls;
 }
 
 function loadAndRun () {
     return Promise.all([
-        fetch('/data/kth5/kth5.liehuu-cates-2022-03-01.json').then(r => r.json()),
-        fetch('/data/kth5/kth5.liehuu-questions-2022-03-01.json').then(r => r.json())
+        fetch('/data/kth5/kth5.liehuu-cates-2022-04-03.json').then(r => r.json()),
+        fetch('/data/kth5/kth5.liehuu-questions-2022-04-03.json').then(r => r.json())
     ]).then(([cates, qs]) => {
         return downloadSql(cates, qs);
     });
