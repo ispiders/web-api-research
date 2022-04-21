@@ -97,6 +97,13 @@ function options (q: TQuestion, answerKeywords: string[]) {
             option: replaceMark(q.An4, answerKeywords)
         }];
 
+        opts.forEach((item) => {
+            if (item.option.indexOf('-') !== -1) {
+                console.log('option has -', q);
+                item.option = item.option.replace('-', '－');
+            }
+        });
+
         let answerCount = opts.filter(item => item.correct).length;
 
         if (type === 2 && answerCount !== 1) {
@@ -145,7 +152,7 @@ function cateType (typeText) {
     return {
         'local': 4,
         'special': 2,
-        'cate': 1
+        'cate': 3
     }[typeText];
 }
 
@@ -174,7 +181,7 @@ function attchementPath (uri, filenames, prefix = '/public/ydt1/') {
     if (uri) {
         let filename = uri.split('/').pop();
 
-        if (!filenames[filename]) {
+        if (filenames && !filenames[filename]) {
             missingCount++;
             // console.log('file missing:', uri);
             return '';
@@ -206,15 +213,16 @@ let subjectMap = {
 };
 
 function realCateId (columnId) {
+    columnId = Number(columnId);
     if (columnId) {
-        return columnId > 1000 ? columnId : columnId + 1000;
+        return columnId + 1000;
     }
     else {
         return 0;
     }
 }
 
-function prepareData (categories: TCategory[], qs: TQuestion[], filenames) {
+function prepareData (categories: TCategory[], qs: TQuestion[], free: TQuestion[], sl: TQuestion[], filenames) {
 
     let cateUid = 1;
     let cates: TTargetCategory[] = [];
@@ -294,35 +302,25 @@ function prepareData (categories: TCategory[], qs: TQuestion[], filenames) {
             }
         }
 
-        if (hasMtc && cate.models.length > 1) {
-            if (cate.type === 4) {
-                return 'cart';
+        let models: string[] = [];
+
+        if (hasCart) {
+            models.push('cart');
+
+            if (hasMtc) {
+                models.push('mtc');
+                // console.warn('cart and mtc', cate);
             }
-            else {
-                console.error('mtc category error', cate);
-                return 'all';
-            }
-        }
-        else if (hasMtc) {
-            return 'mtc';
-        }
-        else if (hasCart) {
-            return 'cart';
-        }
-        else if (hasBus && hasTruck) {
-            console.warn('bus and truk category', cate);
-            return 'cart';
-        }
-        else if (hasBus) {
-            return 'bus';
-        }
-        else if (hasTruck) {
-            return 'truck';
         }
         else {
-            return 'cart';
-            console.error('cate model error', cate);
+            models = [...cate.models];
+
+            if (models.length > 1) {
+                // console.warn('multi model cate', cate);
+            }
         }
+
+        return models;
     }
 
     function getSubject (cate) {
@@ -347,93 +345,119 @@ function prepareData (categories: TCategory[], qs: TQuestion[], filenames) {
 
     Object.keys(cateUniMap).forEach((id) => {
         let cate = cateUniMap[id];
-        let model = getModel(cate);
-        let subject = getSubject(cate);
+        let models = getModel(cate);
+        let subjects = cate.subjects;
         let type = getCateType(cate);
 
-        let c: TTargetCategory = {
-            id: cateUid++,
-            model: model === 'all' ? 'cart' : model,
-            subject: type === 1 ? [subject, '_', 3].join('') : [subject, '_', type].join(''),
-            title: cate.name
-        };
+        models.forEach((model) => {
+            subjects.forEach((subject) => {
+                let catename = cate.name;
 
-        cateIdMap[cate.uid] = c.id;
+                if (model === 'bus') {
+                    catename = catename.replace('货车', '客车');
+                }
+                else if (model === 'truck') {
+                    catename = catename.replace('客车', '货车');
+                }
 
-        cates.push(c);
-
-        // if (model === 'all') {
-        //     c = {
-        //         id: cateUid++,
-        //         model: 'mtc',
-        //         subject: type === 1 ? subject : [subject, '_', type].join(''),
-        //         title: cate.name
-        //     };
-
-        //     cates.push(c);
-        // }
+                let c: TTargetCategory = {
+                    id: getCid(cate.uid, model, subject),
+                    model: model,
+                    subject: type === 1 ? subject : [subject, '_', type].join(''),
+                    title: catename
+                };
+                cates.push(c);
+            });
+        });
     });
 
     let questionUid = 1;
     let questions: TTargetQuestion[] = [];
     let questionMap = {};
 
-    qs.forEach((q) => {
+    let freeMap = free.reduce((map, q) => {
+        map[q.id] = 1;
+        return map;
+    }, {});
+
+    let freeIds = {};
+
+    qs.forEach(q => {
+        let ocate = cateMap[q.cuid];
+
+        if (!ocate) {
+            // console.warn('no cate question', q);
+            return;
+        }
+
+        let cate = cateUniMap[ocate.id];
+
+        let models = getModel(cate);
+        let subjects = cate.subjects;
+        let types = cate.types;
+
+        if (questionMap[q.id]) {
+            if (questionMap[q.id].models) {
+                questionMap[q.id].models = unique(questionMap[q.id].models.concat(models));
+            }
+
+            if (questionMap[q.id].subjects) {
+                questionMap[q.id].subjects = unique(questionMap[q.id].subjects.concat(subjects));
+            }
+
+            if (questionMap[q.id].types) {
+                questionMap[q.id].types = unique(questionMap[q.id].types.concat(types));
+            }
+        }
+        else {
+            questionMap[q.id] = q;
+            questionMap[q.id].models = models;
+            questionMap[q.id].subjects = subjects;
+            questionMap[q.id].types = types;
+        }
+    });
+
+    function getCid(id, model, subject) {
+        let modelIndex = ['', 'cart', 'truck', 'bus', 'mtc'].indexOf(model);
+        let subjectIndex = ['', 'k1', 'k4'].indexOf(subject);
+
+        if (modelIndex === 0 || subjectIndex === 0) {
+            console.error('getCid model subject error', id, model, subject);
+        }
+
+        return id * 8 + modelIndex * subjectIndex;
+    }
+
+    Object.keys(questionMap).forEach((id) => {
+        let q = questionMap[id];
 
         let answerKeywords: string[] = [];
         let skillKeywords: string[] = [];
         let titleKeywords: string[] = [];
-
-        let cate = cateMap[q.cuid];
-        let cid = realCateId(cateIdMap[q.cuid]);
-        let qid = questionUid++;
         let answerTrue = Number(q.AnswerTrue);
         let opts = options(q, answerKeywords);
         let answer = typeof opts === 'string' ? (answerTrue === 1 ? '√' : '×') : opts.filter((item) => {
             return item.correct
         }).map(item => item.option).join('-');
 
-        if (!cate) {
-            return;
-        }
-
         if (answerKeywords.length > 1) {
-            console.warn('more thant 1 answer keywords')
+            // console.warn('more thant 1 answer keywords')
         }
 
-        let unicate = cateUniMap[cate.id];
-        let model = getModel(unicate);
-
-        if (questionMap[q.id]) {
-            if (questionMap[q.id].models.indexOf(cate.model) === -1) {
-                questionMap[q.id].models.push(cate.model);
-                console.log('multi model question', q.id, questionMap[q.id].models);
-            }
-            if (questionMap[q.id].subjects.indexOf(cate.subject) === -1) {
-                questionMap[q.id].subjects.push(cate.subject);
-                console.log('multi subject question', q.id, questionMap[q.id].subjects);
-            }
-        }
-        else {
-            questionMap[q.id] = q;
-            questionMap[q.id].models = [cate.model];
-            questionMap[q.id].subjects = [cate.subject];
-        }
-
-        let question = {
-            id: qid,
+        let questionTemp = {
+            id: 0,
             column_id: 0,
             column_id2: 0,
             column_id3: 0,
             column_id4: 0,
             id_ydt: 0,
-            number: 0,
+            number: Number(q.line) || 0,
             type: q.type,
             answer: answer,
-            model: model === 'all' ? 'cart' : model,
+            model: '',
             opts: typeof opts === 'string' ? '√-×' : opts.map(item => item.option).join('-'),
             answer_mp3: '',
-            subject: cate.subject,
+            subject: '',
             explain_jq: q.voiceEx ? replaceMark(q.voiceEx.trim(), skillKeywords) : '',
             explain_js: q.explain ? replaceMark(q.explain.trim()) : '',
             issue: replaceMark(q.Question, titleKeywords),
@@ -448,26 +472,133 @@ function prepareData (categories: TCategory[], qs: TQuestion[], filenames) {
             answerkeyword: '' // answerKeywords.join('-')
         };
 
-        if (cate.type === 2) {
-            question.column_id2 = cid;
+        if (q.models.length >= 4) {
+            console.warn('question has all models', q.models);
+            q.models = ['cart', 'mtc'];
         }
-        else if (cate.type === 4) {
-            question.column_id4 = cid;
+        else if (q.models.length === 3) {
+            if (q.models.indexOf('cart') !== -1) {
+                console.warn('question models', q.models);
+
+                if (q.models.indexOf('mtc') === -1) {
+                    q.models = ['cart'];
+                }
+                else {
+                    q.models = ['cart', 'mtc'];
+                }
+            }
         }
-        else {
-            question.column_id = cid;
-            question.column_id3 = cid;
+        else if (q.models.length === 2) {
+            if (q.models.indexOf('cart') !== -1 && q.models.indexOf('mtc') === -1) {
+                console.warn('question models', q.models);
+                q.models = ['cart'];
+            }
         }
 
-        questions.push(question);
+        let copys = 0;
+
+        q.models.forEach((model) => {
+            q.subjects.forEach((subject) => {
+                copys++;
+                let cid = realCateId(getCid(q.cuid, model, subject));
+                let question = {
+                    ...questionTemp,
+                    id: questionUid++,
+                    model,
+                    subject
+                };
+
+                q.types.forEach((type) => {
+                    if (type === 1) {
+                        question['column_id'] = cid;
+                    }
+                    else {
+                        question['column_id' + type] = cid;
+                    }
+                });
+
+                if (freeMap[q.id] && !freeIds[q.id]) {
+                    freeIds[q.id] = question.id;
+                }
+
+                questions.push(question);
+            });
+        });
+
+        if (copys > 1) {
+            // console.log('question copys', q.id, copys);
+        }
     });
 
     console.log('missing count: ', missingCount)
 
+    cates = cates.sort((a, b) => a.id - b.id);
+    questions = questions.sort((a, b) => a.id - b.id);
+
+    let slId = Number(cates[cates.length - 1].id) + 1;
+    cates.push({
+        id: slId,
+        model: 'cart',
+        subject: 'sl',
+        title: '三力测试'
+    });
+
+    let qIdStart = Number(questions[questions.length - 1].id) + 1;
+    sl.forEach((q) => {
+        let answerKeywords: string[] = [];
+        let skillKeywords: string[] = [];
+        let titleKeywords: string[] = [];
+
+        let cid = realCateId(slId);
+        let qid = qIdStart++;
+        let answerTrue = Number(q.AnswerTrue);
+        let opts = options(q, answerKeywords);
+        let answer = typeof opts === 'string' ? (answerTrue === 1 ? '√' : '×') : opts.filter((item) => {
+            return item.correct
+        }).map(item => item.option).join('-');
+
+        if (answerKeywords.length > 1) {
+            console.warn('more thant 1 answer keywords')
+        }
+
+        let model = 'cart';
+
+        let question = {
+            id: qid,
+            column_id: 0,
+            column_id2: 0,
+            column_id3: 0,
+            column_id4: cid,
+            id_ydt: 0,
+            number: 0,
+            type: q.type,
+            answer: answer,
+            model: model === 'all' ? 'cart' : model,
+            opts: typeof opts === 'string' ? '√-×' : opts.map(item => item.option).join('-'),
+            answer_mp3: '',
+            subject: 'sl',
+            explain_jq: q.voiceEx ? replaceMark(q.voiceEx.trim(), skillKeywords) : '',
+            explain_js: q.explain ? replaceMark(q.explain.trim()) : '',
+            issue: replaceMark(q.Question, titleKeywords),
+            explain_gif: attchementPath('skill/' + q.id + '.gif', filenames),
+            explain_mp3: attchementPath('mp3/' + q.id + '.mp3', filenames),
+            question_mp3: attchementPath('Qmp3/' + q.id + '.mp3', filenames),
+            explain_js_mp3: attchementPath('Emp3/' + q.id + '.mp3', filenames),
+            image: attchementPath(q.sinaimg, filenames),
+            keywordcolor: '#ff0000',
+            titlekeyword: titleKeywords.join('-'),
+            skillkeyword: skillKeywords.join('-'),
+            answerkeyword: '' // answerKeywords.join('-')
+        };
+
+        questions.push(question);
+    });
+
     return {
         cates,
         questions,
-        files: getFiles(qs)
+        freeids: Object.keys(freeIds).map(id => freeIds[id]),
+        files: unique(getFiles(qs).concat(getFiles(sl)))
     };
 }
 
@@ -507,9 +638,11 @@ function getFiles (questions) {
     return files;
 }
 
-function generateSql (cates, qs, filenames) {
+function generateSql (cates, qs, free, sl, filenames) {
 
-    let data = prepareData(cates, qs, filenames);
+    let data = prepareData(cates, qs, free, sl, filenames);
+
+    window.data = data;
 
     return {
         cateSql: generateInsertSql('ims_quickpass_drivingtest_category', data.cates, {maxRow: 100}),
@@ -518,8 +651,8 @@ function generateSql (cates, qs, filenames) {
     };
 }
 
-function downloadSql (cates, qs, filenames) {
-    let sqls = generateSql(cates, qs, filenames);
+function downloadSql (cates, qs, free, sl, filenames) {
+    let sqls = generateSql(cates, qs, free, sl, filenames);
 
     window.downloadData = sqls;
 
@@ -534,6 +667,8 @@ function loadAndRun () {
     return Promise.all([
         fetch('/data/ydt1-hzqatc/ydt1-categories-20220405.json').then(r => r.json()),
         fetch('/data/ydt1-hzqatc/ydt1-questions-20220405.json').then(r => r.json()),
+        fetch('/data/ydt1-hzqatc/ydt1-free-20220405.json').then(r => r.json()),
+        fetch('/data/ydt1-hzqatc/ydt1-sl-20220405.json').then(r => r.json()),
         fetch('/data/ydt1-hzqatc/ydt1-file-names-20220405.csv').then(r => r.text())
         .then(s => s.split('\n')).then((filenames) => {
             return filenames.reduce((map, name) => {
@@ -541,9 +676,22 @@ function loadAndRun () {
                 return map;
             }, {});
         })
-    ]).then(([cates, qs, filenames]) => {
-        return downloadSql(cates, qs, filenames);
-    }).then((data) => {
-        window.data = data;
+    ]).then(([cates, qs, free, sl, filenames]) => {
+        return downloadSql(cates, qs, free, sl, filenames);
+    });
+}
+
+function loadStateAndRun () {
+    return Promise.all([
+        fetch('/data/ydt1-hzqatc/ydt1-20220412.json').then(r => r.json()),
+        fetch('/data/ydt1-hzqatc/ydt1-file-names-20220412.csv').then(r => r.text())
+        .then(s => s.split('\n')).then((filenames) => {
+            return filenames.reduce((map, name) => {
+                map[name] = 1;
+                return map;
+            }, {});
+        })
+    ]).then(([state, filenames]) => {
+        return downloadSql(state.categories, state.questions, state.free, state.sl, filenames);
     });
 }

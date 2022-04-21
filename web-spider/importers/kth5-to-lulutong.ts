@@ -131,7 +131,7 @@ let typeMap = {
 };
 
 // 只导入指定的分类
-let filterCids = [8, 42, 18, 27, 87, 224, 235, 288];
+let filterCids = [];//[8, 42, 18, 27, 87, 224, 235, 288];
 
 function prepareData (categories: TCategory[], qs: TQuestion[]) {
 
@@ -224,7 +224,7 @@ function prepareData (categories: TCategory[], qs: TQuestion[]) {
     return {
         cates,
         questions,
-        files
+        files: unique(files)
     };
 }
 
@@ -249,17 +249,17 @@ function generateSql (cates, qs) {
 function downloadSql (cates, qs) {
     let sqls = generateSql(cates, qs);
 
-    download(sqls.cateSql, 'kth5-to-lulutong-cates.sql');
-    download(sqls.questionSql, 'kth5-to-lulutong-questions.sql');
-    download(sqls.files, 'kth5-to-lulutong-files.csv');
+    download(sqls.cateSql, 'kth5-to-lulutong-cates-20220412.sql');
+    download(sqls.questionSql, 'kth5-to-lulutong-questions-20220412.sql');
+    download(sqls.files, 'kth5-to-lulutong-files-20220412.csv');
 
     return sqls;
 }
 
 function loadAndRun () {
     return Promise.all([
-        fetch('/data/kth5/kth5.liehuu-cates-2022-04-03.json').then(r => r.json()),
-        fetch('/data/kth5/kth5.liehuu-questions-2022-04-03.json').then(r => r.json())
+        fetch('/data/kth5/kth5.liehuu-cates-2022-04-12.json').then(r => r.json()),
+        fetch('/data/kth5/kth5.liehuu-questions-2022-04-12.json').then(r => r.json())
     ]).then(([cates, qs]) => {
         return downloadSql(cates, qs);
     });
