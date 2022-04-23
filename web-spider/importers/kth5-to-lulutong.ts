@@ -1,3 +1,5 @@
+var run = (function () {
+
 interface TCategory {
     id: number;
     sort: number;
@@ -133,11 +135,14 @@ let typeMap = {
 // 只导入指定的分类
 let filterCids = [];//[8, 42, 18, 27, 87, 224, 235, 288];
 
-function prepareData (categories: TCategory[], qs: TQuestion[]) {
+function prepareData (state) {
+
+    let categories: TCategory[] = state.categories;
+    let qs: TQuestion[] = state.questions;
+    let free: TQuestion[] = state.free;
 
     let files: string[] = [];
-
-    let cates = unique(categories, 'id').map((c) => {
+    let cates = categories.map((c) => {
         let item = {...c};
 
         // if (c.icon) {
@@ -151,7 +156,13 @@ function prepareData (categories: TCategory[], qs: TQuestion[]) {
 
     let questions: TTargetQuestion[] = [];
 
-    unique(qs, 'id').forEach((q) => {
+    let freeMap = free.reduce((ret, q) => {
+        ret[q.idYdt] = q.issue;
+        return ret;
+    }, {});
+    let freeids: number[] = [];
+
+    qs.forEach((q) => {
 
         let t = true;
 
@@ -166,6 +177,10 @@ function prepareData (categories: TCategory[], qs: TQuestion[]) {
 
         if (!t) {
             return;
+        }
+
+        if (freeMap[q.idYdt] === q.issue) {
+            freeids.push(q.id);
         }
 
         let question = {
@@ -224,20 +239,16 @@ function prepareData (categories: TCategory[], qs: TQuestion[]) {
     return {
         cates,
         questions,
-        files: unique(files)
+        files: unique(files),
+        freeids
     };
 }
 
-function generateSql (cates, qs) {
+function generateSql (state) {
 
-    let data = prepareData(cates.filter(cate => {
-        if (filterCids.length) {
-            return filterCids.indexOf(cate.id) !== -1
-        }
-        else {
-            return true;
-        }
-    }), qs);
+    let data = prepareData(state);
+
+    window.data = data;
 
     return {
         cateSql: generateInsertSql('ims_quickpass_drivingtest_category', data.cates, {maxRow: 100}),
@@ -246,12 +257,12 @@ function generateSql (cates, qs) {
     };
 }
 
-function downloadSql (cates, qs) {
-    let sqls = generateSql(cates, qs);
+function downloadSql (state) {
+    let sqls = generateSql(state);
 
-    download(sqls.cateSql, 'kth5-to-lulutong-cates-20220412.sql');
-    download(sqls.questionSql, 'kth5-to-lulutong-questions-20220412.sql');
-    download(sqls.files, 'kth5-to-lulutong-files-20220412.csv');
+    download(sqls.cateSql, 'kth5-to-lulutong-cates-20220421.sql');
+    download(sqls.questionSql, 'kth5-to-lulutong-questions-20220421.sql');
+    download(sqls.files, 'kth5-to-lulutong-files-20220421.csv');
 
     return sqls;
 }
@@ -259,8 +270,62 @@ function downloadSql (cates, qs) {
 function loadAndRun () {
     return Promise.all([
         fetch('/data/kth5/kth5.liehuu-cates-2022-04-12.json').then(r => r.json()),
-        fetch('/data/kth5/kth5.liehuu-questions-2022-04-12.json').then(r => r.json())
-    ]).then(([cates, qs]) => {
-        return downloadSql(cates, qs);
+        fetch('/data/kth5/kth5.liehuu-questions-2022-04-12.json').then(r => r.json()),
+        fetch('/data/kth5/kth5.liehuu-free-2022-04-12.json').then(r => r.json())
+    ]).then(([categories, qs, free]) => {
+
+        let cates = unique(categories, 'id')
+            .sort((a,b) => a.id - b.id)
+            .filter(cate => {
+                if (filterCids.length) {
+                    return filterCids.indexOf(cate.id) !== -1
+                }
+                else {
+                    return true;
+                }
+            });
+
+        let state = {
+            categories: cates,
+            questions: unique(qs, 'id'),
+            free: free.sort((a,b) => a.id - b.id),
+        };
+
+        window.state = state;
+
+        return downloadSql(state);
     });
 }
+
+function loadStateAndRun () {
+    return Promise.all([
+        fetch('/data/kth5/kth5.liehuu-state-20220421.json').then(r => r.json())
+    ]).then(([state]) => {
+
+        let cates = unique(state.categories, 'id')
+            .sort((a,b) => a.id - b.id)
+            .filter(cate => {
+                if (filterCids.length) {
+                    return filterCids.indexOf(cate.id) !== -1
+                }
+                else {
+                    return true;
+                }
+            });
+
+        let data = {
+            categories: cates,
+            questions: unique(state.questions, 'id').sort((a,b) => a.id - b.id),
+            free: state.free.sort((a,b) => a.id - b.id),
+        };
+
+        window.state = data;
+
+        return downloadSql(data);
+    });
+}
+
+return loadStateAndRun;
+
+}());
+

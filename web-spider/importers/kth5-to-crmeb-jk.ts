@@ -340,5 +340,21 @@ var run = (function () {
         });
     }
 
-    return loadAndRun;
+    function loadStateAndRun () {
+        return Promise.all([
+            fetch('/data/kth5/kth5.liehuu-state-20220421.json').then(r => r.json())
+        ]).then(([state]) => {
+            let data = {
+                categories: unique(state.categories, 'id').sort((a,b) => a.id - b.id),
+                questions: unique(state.questions, 'id').sort((a,b) => a.id - b.id),
+                free: state.free.sort((a,b) => a.id - b.id),
+            };
+
+            window.state = data;
+
+            return downloadSql(data);
+        });
+    }
+
+    return loadStateAndRun;
 }());

@@ -1,8 +1,12 @@
-spider = new Spider({});
+spider = (function () {
 
-function main () {
+    let spider = new Spider({
+        categories: [] as any[],
+        questions: [] as any[],
+        free: [] as any[]
+    });
 
-    // 分类图标下载 curl https://app.kuaitongjiakao.com/addons/quickpass_drivingtest/style/mobile/icon/card[22-46].png -o "card#1.png"
+    // 分类图标下载 curl https://app.kuaitongjiakao.com/addons/quickpass_drivingtest/style/mobile/icon/card[22-53].png -o "card#1.png"
     // 直接访问以下地址
     // https://kth5.liehuu.com/h5/pages/skill/required?columnZh=%E5%88%86%E7%B1%BB%E7%BB%83%E4%B9%A0&model=cart&subject=k1_3
     let host = 'https://app.kuaitongjiakao.com';
@@ -93,14 +97,12 @@ function main () {
         }
     });
 
-    spider.state = {
-        categories: [],
-        questions: [],
-        free: []
+    spider.run();
+
+    spider.save = function () {
+        download(spider.state, 'kth5-state.json');
     };
 
-    spider.run();
-}
-
-main();
+    return spider;
+}());
 
